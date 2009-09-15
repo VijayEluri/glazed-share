@@ -67,6 +67,10 @@ public class TreeTableCellRenderer implements TableCellRenderer {
         this.treeList = treeList;
     }
 
+    public TreeList getTreeList() {
+        return treeList;
+    }
+
     /**
      * Build the delegate TableCellRenderer that handles rendering the data of
      * each tree node.
@@ -132,6 +136,10 @@ public class TreeTableCellRenderer implements TableCellRenderer {
         return 2;
     }
 
+    public boolean isShowExpanderForEmptyParent() {
+        return showExpanderForEmptyParent;
+    }
+
     /**
      * If <code>b</code> is <tt>true</tt> then the expand/collapse button must
      * be displayed for nodes which allow children but do not currently have
@@ -139,7 +147,7 @@ public class TreeTableCellRenderer implements TableCellRenderer {
      * <strong>potential</strong> for children may be displayed differently
      * than pure leaf nodes which are guaranteed to never have children.
      */
-    void setShowExpanderForEmptyParent(boolean b) {
+    public void setShowExpanderForEmptyParent(boolean b) {
         showExpanderForEmptyParent = b;
     }
 
