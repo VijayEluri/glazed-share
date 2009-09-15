@@ -3,17 +3,6 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.hibernate;
 
-import ca.odell.glazedlists.BasicEventList;
-import ca.odell.glazedlists.EventList;
-import ca.odell.glazedlists.event.ListEvent;
-import ca.odell.glazedlists.event.ListEventAssembler;
-import ca.odell.glazedlists.event.ListEventListener;
-import ca.odell.glazedlists.event.ListEventPublisher;
-import ca.odell.glazedlists.util.concurrent.ReadWriteLock;
-import org.hibernate.collection.PersistentList;
-import org.hibernate.engine.SessionImplementor;
-import org.hibernate.persister.collection.CollectionPersister;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -21,6 +10,18 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import org.hibernate.collection.PersistentList;
+import org.hibernate.engine.SessionImplementor;
+import org.hibernate.persister.collection.CollectionPersister;
+
+import ca.odell.glazedlists.BasicEventList;
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.event.ListEvent;
+import ca.odell.glazedlists.event.ListEventAssembler;
+import ca.odell.glazedlists.event.ListEventListener;
+import ca.odell.glazedlists.event.ListEventPublisher;
+import ca.odell.glazedlists.util.concurrent.ReadWriteLock;
 
 /**
  * A Hibernate persistent wrapper for an {@link EventList}. Underlying
@@ -66,6 +67,10 @@ public final class PersistentEventList extends PersistentList implements EventLi
 
         updates = new ListEventAssembler(this, newList.getPublisher());
         newList.addListEventListener(this);
+    }
+    
+    public ListEventAssembler getListEventAssembler() {
+        return updates;
     }
 
     /** Kept for compatibility with older Hibernate versions. */

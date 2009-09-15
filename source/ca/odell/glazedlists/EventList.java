@@ -3,13 +3,14 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists;
 
+import java.util.Collection;
+import java.util.List;
+
 import ca.odell.glazedlists.event.ListEvent;
+import ca.odell.glazedlists.event.ListEventAssembler;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.event.ListEventPublisher;
 import ca.odell.glazedlists.util.concurrent.ReadWriteLock;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * An observable {@link List}. {@link ListEventListener}s can register to be
@@ -98,4 +99,9 @@ public interface EventList<E> extends List<E> {
      * to call any method on an {@link EventList} after it has been disposed.
      */
     public void dispose();
+
+    /**
+     * Get assembler of list events
+     */
+    public ListEventAssembler<E> getListEventAssembler();
 }

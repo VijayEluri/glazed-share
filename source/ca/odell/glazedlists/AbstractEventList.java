@@ -4,6 +4,13 @@
 package ca.odell.glazedlists;
 
 // the Glazed Lists' change objects
+import java.lang.reflect.Array;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+
 import ca.odell.glazedlists.event.ListEventAssembler;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.event.ListEventPublisher;
@@ -12,9 +19,6 @@ import ca.odell.glazedlists.impl.GlazedListsImpl;
 import ca.odell.glazedlists.impl.SimpleIterator;
 import ca.odell.glazedlists.impl.SubEventList;
 import ca.odell.glazedlists.util.concurrent.ReadWriteLock;
-
-import java.lang.reflect.Array;
-import java.util.*;
 
 /**
  * A convenience class that implements common functionality for all {@link EventList}s.
@@ -62,6 +66,10 @@ public abstract class AbstractEventList<E> implements EventList<E> {
     /** {@inheritDoc} */
     public ListEventPublisher getPublisher() {
         return publisher;
+    }
+    
+    public ListEventAssembler<E> getListEventAssembler() {
+        return updates;
     }
 
     /** {@inheritDoc} */
