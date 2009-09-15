@@ -3,19 +3,27 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.impl.gui;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import ca.odell.glazedlists.GlazedLists;
 import ca.odell.glazedlists.gui.AbstractTableComparatorChooser;
 import ca.odell.glazedlists.gui.AdvancedTableFormat;
+import ca.odell.glazedlists.gui.SortableFormat;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.impl.sort.ComparatorChain;
 import ca.odell.glazedlists.impl.sort.ReverseComparator;
 import ca.odell.glazedlists.impl.sort.TableColumnComparator;
-
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeSupport;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Keep track of which columns are sorted and how. This is
@@ -34,7 +42,7 @@ public class SortingState {
     private static final Pattern FROM_STRING_PATTERN = Pattern.compile("^\\s*column\\s+(\\d+)(\\s+comparator\\s+(\\d+))?(\\s+(reversed))?\\s*$", Pattern.CASE_INSENSITIVE);
 
     /** the sorting style on a column is used for icon choosing */
-    protected static final int COLUMN_UNSORTED = 0;
+    public static final int COLUMN_UNSORTED = 0;
     protected static final int COLUMN_PRIMARY_SORTED = 1;
     protected static final int COLUMN_PRIMARY_SORTED_REVERSE = 2;
     protected static final int COLUMN_PRIMARY_SORTED_ALTERNATE = 3;
@@ -45,7 +53,7 @@ public class SortingState {
     protected static final int COLUMN_SECONDARY_SORTED_ALTERNATE_REVERSE = 8;
 
     /** the columns and their click counts in indexed order */
-    protected List<SortingColumn> sortingColumns;
+    private final Map<Integer, SortingColumn> sortingColumns = new HashMap<Integer, SortingColumn>();
 
     /** a list that contains all ColumnClickTrackers with non-zero click counts in their visitation order */
     protected List<SortingColumn> recentlyClickedColumns = new ArrayList<SortingColumn>(2);
@@ -104,8 +112,8 @@ public class SortingState {
     }
 
     public void appendComparator(int column, int comparatorIndex, boolean reverse) {
-        if(column > getColumns().size()) throw new IllegalArgumentException("invalid column " + column + ", must be in range 0, " + sortingColumns.size());
-        if(comparatorIndex >= sortingColumns.get(column).getComparators().size()) throw new IllegalArgumentException("invalid comparator index " + comparatorIndex + ", must be in range 0, " + sortingColumns.get(column).getComparators().size());
+        if(comparatorIndex >= sortingColumns.get(column).getComparators().size()) 
+            throw new IllegalArgumentException("invalid comparator index " + comparatorIndex + ", must be in range 0, " + sortingColumns.get(column).getComparators().size());
         if(recentlyClickedColumns.contains(getColumns().get(column))) return;
 
         // add clicks to the specified column
@@ -124,7 +132,7 @@ public class SortingState {
         // Populate a list of Comparators
         final List<Comparator> comparatorsList;
         if(foreignComparator == null) {
-            comparatorsList = Collections.emptyList();
+            comparatorsList = Collections.EMPTY_LIST;
         } else if(foreignComparator instanceof ComparatorChain) {
             ComparatorChain chain = (ComparatorChain)foreignComparator;
             comparatorsList = Arrays.asList(chain.getComparators());
@@ -143,13 +151,13 @@ public class SortingState {
             }
 
             // discover where to add clicks for this comparator
-            for(int c = 0; c < sortingColumns.size(); c++) {
-                if(recentlyClickedColumns.contains(sortingColumns.get(c))) {
+            for (Integer column : sortingColumns.keySet()) {
+                if(recentlyClickedColumns.contains(sortingColumns.get(column))) {
                     continue;
                 }
-                int comparatorIndex = sortingColumns.get(c).getComparators().indexOf(comparator);
+                int comparatorIndex = sortingColumns.get(column).getComparators().indexOf(comparator);
                 if(comparatorIndex != -1) {
-                    final SortingColumn columnClickTracker = sortingColumns.get(c);
+                    final SortingColumn columnClickTracker = sortingColumns.get(column);
                     columnClickTracker.setComparatorIndex(comparatorIndex);
                     columnClickTracker.setReverse(reverse);
                     recentlyClickedColumns.add(columnClickTracker);
@@ -172,12 +180,11 @@ public class SortingState {
      * comparator list for each column.
      */
     public void rebuildColumns(TableFormat tableFormat) {
-        // build the column click trackers
-        final int columnCount = tableFormat.getColumnCount();
+        SortableFormat sortableFormat = (SortableFormat)tableFormat; 
+        sortingColumns.clear();
 
-        sortingColumns = new ArrayList<SortingColumn>(columnCount);
-        for(int i = 0; i < columnCount; i++) {
-            sortingColumns.add(createSortingColumn(tableFormat, i));
+        for (int modelIndex : sortableFormat.getModelIndexes()) {
+            sortingColumns.put(modelIndex, createSortingColumn(tableFormat, modelIndex));
         }
 
         recentlyClickedColumns.clear();
@@ -188,7 +195,19 @@ public class SortingState {
     }
 
     public List<SortingColumn> getColumns() {
-        return sortingColumns;
+        List<SortingColumn> columns = new ArrayList<SortingColumn>(sortingColumns.size());
+        for (SortingColumn column : sortingColumns.values()) {
+            columns.add(column);
+        }
+        return columns;
+    }
+
+    /**
+     * @return sorting column for index, null if not found (ex. fill column)
+     */
+    public SortingColumn getColumn(int columnIndex) {
+        final SortingColumn column = sortingColumns.get(columnIndex);
+        return column;
     }
 
     public List<SortingColumn> getRecentlyClickedColumns() {
@@ -245,7 +264,6 @@ public class SortingState {
             boolean reversedComparator = matcher.group(5) != null;
 
             // bail on invalid data
-            if(columnIndex >= sortingColumns.size()) continue;
             if(comparatorIndex >= sortingColumns.get(columnIndex).getComparators().size()) continue;
 
             // add this comparator in sequence

@@ -12,7 +12,7 @@ import java.util.List;
  *
  * @author <a href="mailto:jesse@swank.ca">Jesse Wilson</a>
  */
-public final class MouseOnlySortingStrategy implements SortingStrategy {
+public class MouseOnlySortingStrategy implements SortingStrategy {
 
     /** if false, other sorting columns will be cleared before a click takes effect */
     private final boolean multipleColumnSort;
@@ -28,40 +28,61 @@ public final class MouseOnlySortingStrategy implements SortingStrategy {
     /**
      * Adjust the sorting state based on receiving the specified clicks.
      */
-    public void columnClicked(SortingState sortingState, int column, int clicks, boolean shift, boolean control) {
-        SortingState.SortingColumn clickedColumn = sortingState.getColumns().get(column);
-        if(clickedColumn.getComparators().isEmpty()) return;
-
-        List<SortingState.SortingColumn> recentlyClickedColumns = sortingState.getRecentlyClickedColumns();
-
-        // on a double click, clear all click counts
-        if(clicks == 2) {
-            for(Iterator<SortingState.SortingColumn> i = recentlyClickedColumns.iterator(); i.hasNext(); ) {
-                SortingState.SortingColumn sortingColumn = i.next();
-                sortingColumn.clear();
-            }
-            recentlyClickedColumns.clear();
-
-        // if we're only sorting one column at a time, clear other columns
-        } else if(!multipleColumnSort) {
-            for(Iterator<SortingState.SortingColumn> i = recentlyClickedColumns.iterator(); i.hasNext(); ) {
-                SortingState.SortingColumn sortingColumn = i.next();
-                if(sortingColumn != clickedColumn) {
+    public void columnClicked(
+            SortingState pSortingState,
+            int column,
+            int clicks,
+            boolean shift,
+            boolean control)
+    {
+        boolean changed = true;
+        SortingState sortingState = (SortingState)pSortingState;
+        SortingState.SortingColumn clickedColumn = sortingState.getColumn(column);
+        
+        // Ignore fill column and such
+        if (clickedColumn != null) {
+            if(clickedColumn.getComparators().isEmpty()) return;
+    
+            List<SortingState.SortingColumn> recentlyClickedColumns = sortingState.getRecentlyClickedColumns();
+    
+            // on a double click, clear all click counts
+            if (shift) {
+                recentlyClickedColumns.remove(clickedColumn);
+                changed = clickedColumn.getComparatorIndex() != -1;
+                clickedColumn.clear();
+            } else if (clicks == 2) {
+                for(Iterator<SortingState.SortingColumn> i = recentlyClickedColumns.iterator(); i.hasNext(); ) {
+                    SortingState.SortingColumn sortingColumn = i.next();
                     sortingColumn.clear();
                 }
+                recentlyClickedColumns.clear();
+    
+            // if we're only sorting one column at a time, clear other columns
+            } else if(!multipleColumnSort) {
+                for(Iterator<SortingState.SortingColumn> i = recentlyClickedColumns.iterator(); i.hasNext(); ) {
+                    SortingState.SortingColumn sortingColumn = i.next();
+                    if(sortingColumn != clickedColumn) {
+                        sortingColumn.clear();
+                    }
+                }
+                recentlyClickedColumns.clear();
             }
-            recentlyClickedColumns.clear();
-        }
 
-        // add a click to the newly clicked column if it has any comparators
-        int netClicks = 1 + clickedColumn.getComparatorIndex() * 2 + (clickedColumn.isReverse() ? 1 : 0);
-        clickedColumn.setComparatorIndex((netClicks / 2) % clickedColumn.getComparators().size());
-        clickedColumn.setReverse(netClicks % 2 == 1);
-        if(!recentlyClickedColumns.contains(clickedColumn)) {
-            recentlyClickedColumns.add(clickedColumn);
+            if (!shift) {
+                // add a click to the newly clicked column if it has any comparators
+                int netClicks = 1 + clickedColumn.getComparatorIndex() * 2 + (clickedColumn.isReverse() ? 1 : 0);
+                clickedColumn.setComparatorIndex((netClicks / 2) % clickedColumn.getComparators().size());
+                clickedColumn.setReverse(netClicks % 2 == 1);
+                if(!recentlyClickedColumns.contains(clickedColumn)) {
+                    recentlyClickedColumns.add(clickedColumn);
+                }
+                changed = true;
+            }
+            
+            if (changed) {
+                // rebuild the sorting state
+                sortingState.fireSortingChanged();
+            }
         }
-
-        // rebuild the sorting state
-        sortingState.fireSortingChanged();
     }
 }

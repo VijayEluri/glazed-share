@@ -3,14 +3,6 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.swing;
 
-import ca.odell.glazedlists.EventList;
-import ca.odell.glazedlists.SortedList;
-import ca.odell.glazedlists.gui.AbstractTableComparatorChooser;
-import ca.odell.glazedlists.gui.AdvancedTableFormat;
-import ca.odell.glazedlists.gui.TableFormat;
-import ca.odell.glazedlists.impl.SortIconFactory;
-import ca.odell.glazedlists.impl.gui.SortingStrategy;
-
 import java.awt.AWTEventMulticaster;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -20,7 +12,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.JLabel;
@@ -30,8 +24,19 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.plaf.UIResource;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
+
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.SortedList;
+import ca.odell.glazedlists.gui.AbstractTableComparatorChooser;
+import ca.odell.glazedlists.gui.AdvancedTableFormat;
+import ca.odell.glazedlists.gui.TableFormat;
+import ca.odell.glazedlists.impl.SortIconFactory;
+import ca.odell.glazedlists.impl.gui.SortingState;
+import ca.odell.glazedlists.impl.gui.SortingStrategy;
+import ca.odell.glazedlists.impl.gui.SortingState.SortingColumn;
 
 /**
  * A TableComparatorChooser is a tool that allows the user to sort a table by clicking
@@ -64,7 +69,6 @@ import javax.swing.table.TableColumnModel;
  * @author <a href="mailto:jesse@swank.ca">Jesse Wilson</a>
  */
 public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E> {
-
     /**
      * the header renderer which decorates an underlying renderer
      * (the table header's default renderer) with a sort arrow icon.
@@ -88,7 +92,7 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
 
     /** when somebody clicks on the header, update the sorting state */
     private final HeaderClickHandler headerClickHandler;
-
+    
     /**
      * Creates and installs a TableComparatorChooser.
      *
@@ -124,7 +128,12 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
      *          <li> {@link ca.odell.glazedlists.gui.AbstractTableComparatorChooser#MULTIPLE_COLUMN_MOUSE_WITH_UNDO}
      * @param tableFormat the TableFormat providing the columns for the table
      */
-    protected TableComparatorChooser(JTable table, SortedList<E> sortedList, Object strategy, TableFormat<? super E> tableFormat) {
+    public TableComparatorChooser(
+            JTable table,
+            SortedList<E> sortedList,
+            Object strategy,
+            TableFormat< ? super E> tableFormat)
+    {
         super(sortedList, tableFormat);
         validateSortingStrategy(strategy);
 
@@ -142,6 +151,18 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
         // install the sorting strategy to interpret clicks
         headerClickHandler = new HeaderClickHandler(table, (SortingStrategy)strategy);
     }
+    
+    public SortedList<E> getSortedList() {
+        return (SortedList<E>)sortedList;
+    }
+
+    public void setSortedList(SortedList<E> pSortedList) {
+        sortedList = pSortedList;
+    }
+
+    public SortingState getSortingState() {
+        return sortingState;
+    }
 
     /**
      * A method to wrap the default renderer of the JTableHeader if it does not
@@ -149,14 +170,17 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
      * delegate of the table header changes.
      */
     private void wrapDefaultTableHeaderRenderer() {
-        final TableCellRenderer defaultRenderer = table.getTableHeader().getDefaultRenderer();
-        final Class defaultRendererType = defaultRenderer == null ? null : defaultRenderer.getClass();
-
-        // if the renderer does not appear to be wrapped, do it
-        if (defaultRendererType != SortArrowHeaderRenderer.class && defaultRendererType != null) {
-            // decorate the default table header renderer with sort arrows
-            sortArrowHeaderRenderer = new SortArrowHeaderRenderer(defaultRenderer);
-            table.getTableHeader().setDefaultRenderer(sortArrowHeaderRenderer);
+        final JTableHeader header = table.getTableHeader();
+        if (header != null) {
+            final TableCellRenderer defaultRenderer = header.getDefaultRenderer();
+            final Class defaultRendererType = defaultRenderer == null ? null : defaultRenderer.getClass();
+    
+            // if the renderer does not appear to be wrapped, do it
+            if (defaultRendererType != SortArrowHeaderRenderer.class && defaultRendererType != null) {
+                // decorate the default table header renderer with sort arrows
+                sortArrowHeaderRenderer = new SortArrowHeaderRenderer(defaultRenderer);
+                header.setDefaultRenderer(sortArrowHeaderRenderer);
+            }
         }
     }
 
@@ -187,7 +211,7 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
     public static <E> TableComparatorChooser<E> install(JTable table, SortedList<E> sortedList, Object strategy) {
         return install(table, sortedList, strategy, ((AdvancedTableModel<E>)table.getModel()).getTableFormat());
     }
-
+   
     /**
      * Installs a new TableComparatorChooser that responds to clicks on the
      * header of the specified table and uses them to sort the specified
@@ -216,7 +240,7 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
     public static <E> TableComparatorChooser<E> install(JTable table, SortedList<E> sortedList, Object strategy, TableFormat<? super E> tableFormat) {
         return new TableComparatorChooser<E>(table, sortedList, strategy, tableFormat);
     }
-
+    
     /**
      * Ensures the given <code>strategy</code> is an accepted value. It is
      * possible for people to define their own sorting strategies, so this
@@ -291,8 +315,11 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
         super.redetectComparator(currentComparator);
 
         // force the table header to redraw itself
-        table.getTableHeader().revalidate();
-        table.getTableHeader().repaint();
+        final JTableHeader header = table.getTableHeader();
+        if (header != null) {
+            header.revalidate();
+            header.repaint();
+        }
     }
 
     /**
@@ -303,8 +330,11 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
         super.rebuildComparator();
 
         // force the table header to redraw itself
-        table.getTableHeader().revalidate();
-        table.getTableHeader().repaint();
+        final JTableHeader header = table.getTableHeader();
+        if (header != null) {
+            header.revalidate();
+            header.repaint();
+        }
 
         // notify interested listeners that the sorting has changed
         if(sortListener != null) sortListener.actionPerformed(new ActionEvent(this, 0, "sort"));
@@ -314,8 +344,38 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
      * Gets the sorting style currently applied to the specified column.
      */
     @Override
-    protected final int getSortingStyle(int column) {
-        return super.getSortingStyle(table.convertColumnIndexToModel(column));
+    protected final int getSortingStyle(int columnIndex) {
+        final SortingColumn column = getSortingState().getColumn(table.convertColumnIndexToModel(columnIndex));
+        return column != null
+            ? column.getSortingStyle()
+            : SortingState.COLUMN_UNSORTED;
+    }
+
+    @Override
+    public int getColumnComparatorIndex(int columnIndex) {
+        final SortingColumn column = getSortingState().getColumn(table.convertColumnIndexToModel(columnIndex));
+        return column != null
+            ? column.getComparatorIndex()
+            : -1;
+    }
+
+    /**
+     * Gets whether the comparator in use for the specified column is reverse.
+     */
+    @Override
+    public boolean isColumnReverse(int columnIndex) {
+        final SortingColumn column = getSortingState().getColumn(table.convertColumnIndexToModel(columnIndex));
+        return column != null
+            ? column.isReverse()
+            : false;
+    }
+    
+    @Override
+    public List<Comparator> getComparatorsForColumn(int columnIndex) {
+        final SortingColumn column = getSortingState().getColumn(table.convertColumnIndexToModel(columnIndex));
+        return column != null
+            ? column.getComparators()
+            : Collections.<Comparator>emptyList();
     }
 
     /**
@@ -365,7 +425,7 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
      * to be garbage collected before its source {@link EventList}. This is
      * necessary for situations where an {@link TableComparatorChooser} is short-lived but
      * its source {@link EventList} is long-lived.
-     *
+     * 
      * <p><strong><font color="#FF0000">Warning:</font></strong> It is an error
      * to call any method on a {@link TableComparatorChooser} after it has been disposed.
      */
@@ -376,13 +436,15 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
 
         // if the default renderer within the table header is our sort arrow renderer,
         // uninstall it by restoring the table header's original default renderer
-        if (table.getTableHeader().getDefaultRenderer() == sortArrowHeaderRenderer)
-            table.getTableHeader().setDefaultRenderer(sortArrowHeaderRenderer.getDelegateRenderer());
-
+        final JTableHeader header = table.getTableHeader();
+        if (header != null) {
+            if (header.getDefaultRenderer() == sortArrowHeaderRenderer)
+                header.setDefaultRenderer(sortArrowHeaderRenderer.getDelegateRenderer());
+        }
         // remove our listeners from the table's header and model
         table.getModel().removeTableModelListener(tableModelHandler);
         table.removePropertyChangeListener("model", tableModelHandler);
-        table.getTableHeader().removePropertyChangeListener("UI", tableHeaderUIHandler);
+        header.removePropertyChangeListener("UI", tableHeaderUIHandler);
 
         // null out our table reference for safety's sake
         table = null;
@@ -549,11 +611,13 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
         private final JTable table;
         private final SortingStrategy delegate;
         private boolean mouseEventIsPerformingPopupTrigger = false;
+        private final JTableHeader mHeader; 
 
         public HeaderClickHandler(JTable table, SortingStrategy delegate) {
             this.table = table;
             this.delegate = delegate;
-            table.getTableHeader().addMouseListener(this);
+            mHeader = table.getTableHeader();
+            mHeader.addMouseListener(this);
         }
 
         @Override
@@ -591,7 +655,7 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
         }
 
         public void dispose() {
-            table.getTableHeader().removeMouseListener(this);
+            mHeader.removeMouseListener(this);
         }
-    }
+    }    
 }
