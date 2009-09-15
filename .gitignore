@@ -12,3 +12,4 @@ CVS
 *.swp
 *.tmp
 *~
+target/classes/*

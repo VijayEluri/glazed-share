@@ -30,7 +30,6 @@
 	<classpathentry kind="lib" path="extensions/swt/lib/org.eclipse.equinox.common.jar"/>
 	<classpathentry kind="lib" path="extensions/swt/lib/org.eclipse.jface.jar"/>
 	<classpathentry kind="lib" path="extensions/swt/lib/org.eclipse.swt.gtk.linux.x86.jar"/>
-	<classpathentry kind="lib" path="target/glazedlists_java15.jar"/>
 	<classpathentry kind="lib" path="tools/bnd.jar"/>
 	<classpathentry kind="lib" path="www/glazedlists-demo.jar"/>
 	<classpathentry kind="lib" path="www/xmlbrowser.jar"/>
