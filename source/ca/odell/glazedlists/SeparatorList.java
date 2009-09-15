@@ -3,6 +3,10 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists;
 
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.impl.Grouper;
 import ca.odell.glazedlists.impl.adt.Barcode;
@@ -10,10 +14,6 @@ import ca.odell.glazedlists.impl.adt.BarcodeIterator;
 import ca.odell.glazedlists.impl.adt.barcode2.Element;
 import ca.odell.glazedlists.impl.adt.barcode2.SimpleTree;
 import ca.odell.glazedlists.impl.adt.barcode2.SimpleTreeIterator;
-
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 /**
  * A list that adds separator objects before each group of elements.
@@ -141,7 +141,7 @@ public class SeparatorList<E> extends TransformedList<E, E> {
         // make the change to the sorted source, the grouper will respond but
         // the {@link SeparatorInjectorList} doesn't fire any events forward when
         // its main Comparator is changed
-        SortedList<E> sortedList = (SortedList<E>)separatorSource.source;
+        SortedList<E> sortedList = (SortedList<E>)separatorSource.getSource();
         sortedList.setComparator(comparator);
 
         if (!isEmpty) {
@@ -496,7 +496,11 @@ public class SeparatorList<E> extends TransformedList<E, E> {
             // handle changes via the grouper
             source.addListEventListener(this);
         }
-
+        
+        public EventList<E> getSource() {
+            return source;
+        }
+        
         /**
          * Statically build the separators data structures.
          */
@@ -514,7 +518,7 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                 insertedSeparators.add(groupIndex + sourceIndex, SEPARATOR, 1);
                 Element<GroupSeparator> node = separators.add(groupIndex, new GroupSeparator(), 1);
                 node.get().setNode(node);
-                node.get().setLimit(defaultLimit);
+                node.get().setLimit(defaultLimit,false);
             }
             // update the cached values in all separators
             for(int i = 0; i < separators.size(); i++) {
@@ -739,7 +743,7 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                 return limit;
             }
             /** {@inheritDoc} */
-            public void setLimit(int limit) {
+            protected void setLimit(int limit, boolean fireEvents) {
                 if(this.limit == limit) return;
                 // fail gracefully if the node is null, that means this separator
                 // has been removed from the list but its still visible to an editor
@@ -750,15 +754,23 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                 this.limit = limit;
 
                 // notify the world of this separator change
-                updates.beginEvent();
-                int groupIndex = separators.indexOfNode(node, (byte)1);
-                int separatorIndex = insertedSeparators.getIndex(groupIndex, SEPARATOR);
-                updates.addUpdate(separatorIndex);
-                updates.commitEvent();
+                if (fireEvents) {
+                    updates.beginEvent();
+                    int groupIndex = separators.indexOfNode(node, (byte)1);
+                    int separatorIndex = insertedSeparators.getIndex(groupIndex, SEPARATOR);
+                    updates.addUpdate(separatorIndex);
+                    updates.commitEvent();
+                }
             }
+            
+            /** {@inheritDoc} */
+            public void setLimit(int limit) {
+                setLimit(limit,true);
+            }
+            
             /** {@inheritDoc} */
             public List<E> getGroup() {
-                if(node == null) return Collections.emptyList();
+                if(node == null) return Collections.EMPTY_LIST;
                 return source.subList(start(), end());
             }
             /** {@inheritDoc} */
