@@ -1,0 +1,14 @@
+CVS
+*#
+*#*
+*.bak
+*.class
+*.hprof
+*.hprof.index
+*.jpage
+*.old
+*.orig
+*.page
+*.swp
+*.tmp
+*~
