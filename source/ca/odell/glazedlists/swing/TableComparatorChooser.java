@@ -152,6 +152,10 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
         headerClickHandler = new HeaderClickHandler(table, (SortingStrategy)strategy);
     }
     
+    public JTable getTable() {
+        return table;
+    }
+
     public SortedList<E> getSortedList() {
         return (SortedList<E>)sortedList;
     }

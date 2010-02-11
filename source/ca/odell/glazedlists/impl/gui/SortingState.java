@@ -290,11 +290,26 @@ public class SortingState {
             if(tableFormat instanceof AdvancedTableFormat) {
                 AdvancedTableFormat advancedTableFormat = (AdvancedTableFormat)tableFormat;
                 Comparator columnComparator = advancedTableFormat.getColumnComparator(column);
-                if(columnComparator != null) comparators.add(new TableColumnComparator(tableFormat, column, columnComparator));
+                if(columnComparator != null) comparators.add(createComparator(tableFormat, column, columnComparator));
             // otherwise just add the default comparator
             } else {
-                comparators.add(new TableColumnComparator(tableFormat, column));
+                comparators.add(createComparator(tableFormat, column));
             }
+        }
+
+        protected TableColumnComparator createComparator(
+                TableFormat tableFormat,
+                int column)
+        {
+            return new TableColumnComparator(tableFormat, column);
+        }
+
+        protected TableColumnComparator createComparator(
+                TableFormat tableFormat,
+                int column,
+                Comparator columnComparator)
+        {
+            return new TableColumnComparator(tableFormat, column, columnComparator);
         }
 
         public void clear() {

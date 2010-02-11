@@ -122,6 +122,14 @@ public abstract class AbstractTableComparatorChooser<E> {
 
         this.sortingState.addPropertyChangeListener(new SortingStateListener());
     }
+    
+    public SortedList<E> getSortedList() {
+        return sortedList;
+    }
+
+    public SortingState getSortingState() {
+        return sortingState;
+    }
 
     /**
      * Returns the object which models the current sorting state of all columns
@@ -168,6 +176,13 @@ public abstract class AbstractTableComparatorChooser<E> {
         sortingState.rebuildColumns(tableFormat);
     }
 
+    public TableFormat< ? super E> getTableFormat() {
+        return tableFormat;
+    }
+
+    public Comparator< ? super E> getSortedListComparator() {
+        return sortedListComparator;
+    }
 
     /**
      * Gets the list of comparators for the specified column. The user is
