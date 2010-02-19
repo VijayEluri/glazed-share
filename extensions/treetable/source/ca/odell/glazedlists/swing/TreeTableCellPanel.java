@@ -3,12 +3,27 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.swing;
 
-import javax.swing.*;
-import javax.swing.border.Border;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.LayoutManager2;
+import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.border.Border;
 
 /**
  * This panel exists to relieve the burdens of creating a
@@ -40,21 +55,33 @@ public class TreeTableCellPanel extends JPanel {
     private static final Border NO_FOCUS_BORDER = BorderFactory.createEmptyBorder(0, 0, 0, 0);
 
     /** A cache of appropriate indenter/spacer components for each unique width in the tree. */
-    private final Map<Integer, Component> spacerComponentsCache = new HashMap<Integer, Component>();
+    protected final Map<Integer, Component> spacerComponentsCache = new HashMap<Integer, Component>();
 
     /** The button to toggle the expanded/collapsed state of the tree node. */
-    private final JButton expanderButton = new JButton();
+    private JButton expanderButton;
 
     /** The last installed node component, if any. */
     private Component nodeComponent;
 
     public TreeTableCellPanel() {
         super(new TreeTableCellLayout());
-
+        expanderButton = createExpanderButton();
+    }
+    
+    /**
+     * @return Customized expander button
+     */
+    protected JButton createExpanderButton() {
+        JButton button = new JButton();
         // configure the expander button to display its icon with no margins
-        expanderButton.setBorder(BorderFactory.createEmptyBorder());
-        expanderButton.setContentAreaFilled(false);
-        expanderButton.setFocusable(false);
+        button.setBorder(BorderFactory.createEmptyBorder());
+        button.setContentAreaFilled(false);
+        button.setFocusable(false);
+        return button;
+    }
+
+    public JButton getExpanderButton() {
+        return expanderButton;
     }
 
     /**
@@ -174,7 +201,7 @@ public class TreeTableCellPanel extends JPanel {
     /**
      * Return a spacer component and update the spacer component cache as needed.
      */
-    private Component getSpacer(int width) {
+    protected Component getSpacer(int width) {
         final Integer key = new Integer(width);
 
         Component spacer = spacerComponentsCache.get(key);

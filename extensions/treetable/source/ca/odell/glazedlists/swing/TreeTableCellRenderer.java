@@ -3,12 +3,14 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.swing;
 
-import ca.odell.glazedlists.TreeList;
+import java.awt.Component;
 
-import javax.swing.*;
+import javax.swing.JTable;
+import javax.swing.UIManager;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
-import java.awt.*;
+
+import ca.odell.glazedlists.TreeList;
 
 /**
  * This renderer removes some of the burden of producing an appropriate looking
@@ -38,7 +40,7 @@ import java.awt.*;
 public class TreeTableCellRenderer implements TableCellRenderer {
 
     /** The panel capable of laying out a indenter component, expander button, spacer component, and data Component to produce the entire tree node display. */
-    private final TreeTableCellPanel component = new TreeTableCellPanel();
+    private final TreeTableCellPanel component;
 
     /** The user-supplied renderer that produces the look of the tree node's data. */
     private TableCellRenderer delegate;
@@ -65,8 +67,16 @@ public class TreeTableCellRenderer implements TableCellRenderer {
     public TreeTableCellRenderer(TableCellRenderer delegate, TreeList treeList) {
         this.delegate = delegate == null ? createDelegateRenderer() : delegate;
         this.treeList = treeList;
+        component = createTreeTableCellPanel();
     }
 
+    /**
+     * @return Customi tree renderer panel
+     */
+    protected TreeTableCellPanel createTreeTableCellPanel() {
+        return new TreeTableCellPanel();
+    }
+    
     public TreeList getTreeList() {
         return treeList;
     }
@@ -112,6 +122,7 @@ public class TreeTableCellRenderer implements TableCellRenderer {
         component.configure(treeNodeData, showExpanderForEmptyParent, c, hasFocus, indent, spacer);
         return component;
     }
+    
 
     /**
      * Returns the number of pixels to indent the contents of the renderer.
