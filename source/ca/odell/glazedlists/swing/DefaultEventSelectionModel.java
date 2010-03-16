@@ -52,7 +52,7 @@ import javax.swing.event.ListSelectionListener;
  *
  * @author <a href="mailto:jesse@swank.ca">Jesse Wilson</a>
  */
-public final class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel<E> {
+public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel<E> {
 
     /** the event lists that provide an event list view of the selection */
     private ListSelection<E> listSelection;

@@ -3,7 +3,13 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists;
 
-import java.util.*;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.impl.GlazedListsImpl;
@@ -169,6 +175,10 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             }
             sourceNodes.dispose();
         }
+    }
+
+    public ExpansionModel<E> getExpansionModel() {
+        return expansionModel;
     }
 
     /**
