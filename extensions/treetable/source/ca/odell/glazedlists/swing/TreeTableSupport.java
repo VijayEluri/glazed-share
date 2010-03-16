@@ -585,6 +585,11 @@ public final class TreeTableSupport {
 
             // if a left-click occurred over the expand/collapse button
             final TreeTableCellPanel renderedPanel = TreeTableUtilities.prepareRenderer(me);
+            boolean hitNode = true;
+            if (renderedPanel != null) {
+                Component hit = renderedPanel.findComponentAt(clickPoint);
+                hitNode = hit == renderedPanel.getNodeComponent();
+            }
             if (SwingUtilities.isLeftMouseButton(me) && renderedPanel != null && renderedPanel.isPointOverExpanderButton(clickPoint)) {
                 treeList.getReadWriteLock().writeLock().lock();
                 try {
@@ -599,7 +604,9 @@ public final class TreeTableSupport {
                 return;
             }
 
-            delegate.mousePressed(me);
+            if (hitNode) {
+                delegate.mousePressed(me);
+            }
         }
 
         public void mouseClicked(MouseEvent me) { delegate.mouseClicked(me); }
