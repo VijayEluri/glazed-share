@@ -47,7 +47,7 @@ public final class ListEventAssembler<E> {
     private final ListEvent<E> listEvent;
     private final ListEventFormat eventFormat = new ListEventFormat();
     /** true if we're waiting on the publisher to distribute our event */
-    private boolean eventIsBeingPublished = false;
+    protected boolean eventIsBeingPublished = false;
 
     /**
      * Create a new {@link ListEventPublisher} for an {@link EventList} not attached
@@ -395,7 +395,7 @@ public final class ListEventAssembler<E> {
     /**
      * Cleanup all temporary variables necessary while events are being fired.
      */
-    private void cleanup() {
+    protected void cleanup() {
         eventThread = null;
         blockSequence.reset();
         listDeltas.reset(sourceList.size());

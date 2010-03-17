@@ -56,26 +56,26 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     }
 
     /** marker values for comparing elements */
-    private static final Element MINIMUM_ELEMENT = new FakeElement();
-    private static final Element MAXIMUM_ELEMENT = new FakeElement();
+    protected static final Element MINIMUM_ELEMENT = new FakeElement();
+    protected static final Element MAXIMUM_ELEMENT = new FakeElement();
 
     private static final FunctionList.Function NO_OP_FUNCTION = new NoOpFunction();
 
     /** determines the layout of new nodes as they are created */
-    private ExpansionModel<E> expansionModel;
+    protected ExpansionModel<E> expansionModel;
 
     /** node colors define where it is in the source and where it is here */
     private static final ListToByteCoder<String> BYTE_CODER = new ListToByteCoder<String>(Arrays.asList("R", "V", "r", "v"));
     private static final byte VISIBLE_REAL = BYTE_CODER.colorToByte("R");
     private static final byte VISIBLE_VIRTUAL = BYTE_CODER.colorToByte("V");
-    private static final byte HIDDEN_REAL = BYTE_CODER.colorToByte("r");
-    private static final byte HIDDEN_VIRTUAL = BYTE_CODER.colorToByte("v");
+    protected static final byte HIDDEN_REAL = BYTE_CODER.colorToByte("r");
+    protected static final byte HIDDEN_VIRTUAL = BYTE_CODER.colorToByte("v");
 
     /** node classes let us search through nodes more efficiently */
-    private static final byte ALL_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "V", "r", "v"));
-    private static final byte VISIBLE_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "V"));
+    protected static final byte ALL_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "V", "r", "v"));
+    protected static final byte VISIBLE_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "V"));
     private static final byte HIDDEN_NODES = BYTE_CODER.colorsToByte(Arrays.asList("r", "v"));
-    private static final byte REAL_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "r"));
+    protected static final byte REAL_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "r"));
 
     /** compare nodes by value */
     private final NodeComparator<E> nodeComparator;
@@ -95,7 +95,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * <p>Children of collapsed nodes are {@link #VISIBLE_NODES}, everything
      * else is {@link #HIDDEN_NODES}.
      */
-    private FourColorTree<Node<E>> data = new FourColorTree<Node<E>>(BYTE_CODER);
+    protected FourColorTree<Node<E>> data = new FourColorTree<Node<E>>(BYTE_CODER);
 
     /**
      * The format is used to obtain path information from list elements.
@@ -144,9 +144,9 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * objects required by the class constructor.
      */
     private static class InitializationData<E> {
-        private final Format<E> format;
-        private final ExpansionModel<E> expansionModel;
-        private final NodeComparator<E> nodeComparator;
+        protected final Format<E> format;
+        protected final ExpansionModel<E> expansionModel;
+        protected final NodeComparator<E> nodeComparator;
 
         private final FunctionList<E,Node<E>> sourceNodes;
         private final SortedList<Node<E>> sortedList;
@@ -384,7 +384,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * is useful when expand/collapsed state changes as nodes are split and
      * merged due to tree structure changes.
      */
-    private void setExpanded(Node<E> toExpand, boolean expanded) {
+    protected void setExpanded(Node<E> toExpand, boolean expanded) {
 
         // if we're already in the desired state, give up!
         if(toExpand.expanded == expanded) return;
@@ -449,7 +449,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     /**
      * Set the visibility of the specified node without firing any events.
      */
-    private void setVisible(Node<E> node, boolean visible) {
+    protected void setVisible(Node<E> node, boolean visible) {
         byte newColor;
         if(visible) {
             newColor = node.virtual ? VISIBLE_VIRTUAL : VISIBLE_REAL;
@@ -529,7 +529,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         private final boolean fireEvents;
 
         /** the queue of nodes needing parents and siblings attached */
-        private final NodesToAttach nodesToAttach = new NodesToAttach();
+        protected final NodesToAttach nodesToAttach = new NodesToAttach();
 
         /** the node having its parents and siblings attached */
         private Node<E> current;
@@ -783,7 +783,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * Add this node to the queue in order.
          * @param node
          */
-        private void queueOutOfOrderNodeForAttaching(Node<E> node) {
+        protected void queueOutOfOrderNodeForAttaching(Node<E> node) {
             int position = Collections.binarySearch(nodes, node, nodeIndexComparator);
             if(position >= 0) return;
             nodes.add(-position - 1, node);
@@ -793,7 +793,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         /**
          * Add this node to the beginning of the queue.
          */
-        private void queuePrefixForAttaching(Node<E> node) {
+        protected void queuePrefixForAttaching(Node<E> node) {
             if(!nodes.isEmpty()) {
                 if(nodes.get(0) == node) {
                     return;
@@ -807,7 +807,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         /**
          * Add this node to the end of the queue.
          */
-        private void queueNewNodeForInserting(Node<E> node) {
+        protected void queueNewNodeForInserting(Node<E> node) {
             assert(nodes.isEmpty() || nodeIndexComparator.compare(nodes.get(nodes.size() - 1), node) < 0);
             nodes.add(node);
             node.isNewlyInserted = true;
@@ -815,15 +815,15 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             assert(isValid());
         }
 
-        private boolean isEmpty() {
+        protected boolean isEmpty() {
             return nodes.isEmpty();
         }
 
-        private Node<E> removeFirst() {
+        protected Node<E> removeFirst() {
             return nodes.remove(0);
         }
 
-        private boolean getNewlyInsertedAndReset(Node<E> node) {
+        protected boolean getNewlyInsertedAndReset(Node<E> node) {
             boolean result = node.isNewlyInserted;
             node.isNewlyInserted = false;
             return result;
@@ -1033,7 +1033,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * structure completely. This is used to replace a virtual node with a real
      * one or vice versa.
      */
-    private void replaceNode(Node<E> before, Node<E> after, boolean virtual) {
+    protected void replaceNode(Node<E> before, Node<E> after, boolean virtual) {
         assert(before.pathLength() == after.pathLength());
         after.expanded = before.expanded;
         // change parent and children
@@ -1202,7 +1202,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * @return true if the path of possibleAncestor is a proper prefix of
      *      the path of this node.
      */
-    private boolean isAncestorByValue(Node<E> child, Node<E> possibleAncestor) {
+    protected boolean isAncestorByValue(Node<E> child, Node<E> possibleAncestor) {
         if(possibleAncestor == null) return true;
         List<E> possibleAncestorPath = possibleAncestor.path;
 
@@ -1289,7 +1289,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * Prepare the state of the node and insert it into the datastore. It will
      * still be necessary to attach parent and sibling nodes.
      */
-    private void addNode(Node<E> node, byte nodeColor, int realIndex) {
+    protected void addNode(Node<E> node, byte nodeColor, int realIndex) {
         node.element = data.add(realIndex, ALL_NODES, nodeColor, node, 1);
     }
 
@@ -1362,7 +1362,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * Convert the specified {@link Comparator<E>} into a {@link Comparator} for
      * nodes of type E.
      */
-    private static <E> NodeComparator<E> comparatorToNodeComparator(Format<E> format) {
+    protected static <E> NodeComparator<E> comparatorToNodeComparator(Format<E> format) {
         return new NodeComparator<E>(format);
     }
 
@@ -1438,21 +1438,21 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      */
     public static final class Node<E> {
 
-        private final List<E> path;
+        protected final List<E> path;
 
         /** true if this node isn't in the source list */
-        private boolean virtual;
+        protected boolean virtual;
 
         /** true if this node's children should be visible */
-        private boolean expanded;
+        protected boolean expanded;
 
         /** the element object points back at this, for the tree's structure cache */
-        private Element<Node<E>> element;
+        protected Element<Node<E>> element;
 
         /** the relationship of this node to others */
-        private Node<E> siblingAfter;
-        private Node<E> siblingBefore;
-        private Node<E> parent;
+        protected Node<E> siblingAfter;
+        protected Node<E> siblingBefore;
+        protected Node<E> parent;
 
         /**
          * Nodes are temporarily aware if they're brand new nodes that haven't
@@ -1462,7 +1462,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * <p>This value should always be false when a change is not in
          * progress.
          */
-        private boolean isNewlyInserted = false;
+        protected boolean isNewlyInserted = false;
 
         /**
          * Construct a new node.
@@ -1481,7 +1481,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * residual state due to a previous location in the tree, in the event
          * that the node was subject to a reordering event.
          */
-        private void resetDerivedState() {
+        protected void resetDerivedState() {
             virtual = false;
             element = null;
             siblingAfter = null;
@@ -1494,7 +1494,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          *
          * @return 1 for the root node, 2 for its children, etc.
          */
-        private int pathLength() {
+        protected int pathLength() {
             return path.size();
         }
 
@@ -1515,7 +1515,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         /**
          * Create a {@link Node} that resembles the parent of this.
          */
-        private Node<E> describeParent() {
+        protected Node<E> describeParent() {
             int pathLength = pathLength();
             // this is a root node, it has no parent
             if(pathLength == 1) return null;
@@ -1552,7 +1552,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * @return the node that follows this one, or <code>null</code> if there
          * is no such node.
          */
-        private Node<E> next() {
+        protected Node<E> next() {
             // TODO(jessewilson): this check prevents us from failing when the data
             // is inconstent. We don't like this check since it's broken that we need
             // to do it, instead we should be throwing IllegalStateException
@@ -1568,7 +1568,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * @return the node that precedes this one, or <code>null</code> if there
          * is no such node.
          */
-        private Node<E> previous() {
+        protected Node<E> previous() {
             Element<Node<E>> previous = element.previous();
             return (previous == null) ? null : previous.get();
         }
@@ -1578,7 +1578,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * such child exists. This is <strong>not</strong> by value, but by the
          * current tree structure.
          */
-        private Node<E> firstChild() {
+        protected Node<E> firstChild() {
             // the first child is always the node immediately after
             Node<E> possibleChild = next();
             if(possibleChild == null) return null;
@@ -1606,7 +1606,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * <p>If the ancestor path length is the same as this node's path length,
          * then this node will be returned.
          */
-        private Node<E> ancestorWithPathLength(int ancestorPathLength) {
+        protected Node<E> ancestorWithPathLength(int ancestorPathLength) {
             assert(pathLength() >= ancestorPathLength);
             Node<E> ancestor = this;
             while(ancestor.pathLength() > ancestorPathLength) {
@@ -1622,7 +1622,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * Detach the siblings of the specified node so those siblings remain
          * well-formed in absence of this node.
          */
-        private void detachSiblings() {
+        protected void detachSiblings() {
             // remove myself, linked list style
             if(siblingBefore != null) {
                 siblingBefore.siblingAfter = siblingAfter;
