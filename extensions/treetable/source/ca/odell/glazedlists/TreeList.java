@@ -489,14 +489,24 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             int type = listChanges.getType();
 
             if(type == ListEvent.INSERT) {
-                Node<E> inserted = finderInserter.findOrInsertNode(sourceIndex);
+                Node<E> inserted = finderInserter.findOrInsertNode(sourceIndex, null, -1);
                 nodeAttacher.nodesToAttach.queueNewNodeForInserting(inserted);
 
             } else if(type == ListEvent.UPDATE) {
-                deleteAndDetachNode(sourceIndex, nodesToVerify);
-                Node<E> updated = finderInserter.findOrInsertNode(sourceIndex);
-                nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
+                // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
+//              boolean deleted = deleteAndDetachNode(sourceIndex, nodesToVerify);
+                
+                Node<E> oldNode = source.get(sourceIndex);
+                int oldIndex = indexOf(oldNode.getElement());
 
+                Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, nodesToVerify, oldIndex);
+                if (updated != null) {
+                    nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
+                } else {
+                    // Only update index
+                    updates.addUpdate(oldIndex);
+                }
+                
             } else if(type == ListEvent.DELETE) {
                 deleteAndDetachNode(sourceIndex, nodesToVerify);
             }
@@ -872,9 +882,17 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          *
          * @param sourceIndex the index of the element in the source list that has
          *      been inserted
-         * @return the new node, prior to any events fired
+         * @param nodesToVerify non null if ListEvent.UPDATE is handled
+         * @param oldIndex Relevant only with nodesToVerify, otherwise use -1
+         * 
+         * @return the new node, prior to any events fired, null if INSERT 
+         * wasn't actually done
          */
-        private Node<E> findOrInsertNode(int sourceIndex) {
+        protected Node<E> findOrInsertNode(
+                int sourceIndex, 
+                List<Node<E>> nodesToVerify,
+                int oldIndex) 
+        {
             Node<E> inserted = source.get(sourceIndex);
             inserted.resetDerivedState();
             List<E> insertedPath = inserted.path();
@@ -908,21 +926,30 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
             // find a virtual node that's an ancestor by value
             int insertIndex = firstPossibleIndex;
-            for (int i = insertedPath.size() - 1; i >= 0; i--) {
-                List<E> pathOfLengthI = insertedPath.subList(0, i);
-                Element<Node<E>> bestAncestor = indicesByValue.find(firstPossibleElement, lastPossibleElement, pathOfLengthI);
-                if (bestAncestor != null) {
-                    if (!bestAncestor.get().virtual) {
-                        throw new IllegalStateException();
-                    }
-                    insertIndex = data.indexOfNode(bestAncestor, ALL_NODES) + 1;
-                    break;
+            if (oldIndex != insertIndex) {
+                if (nodesToVerify != null) {
+                    deleteAndDetachNode(sourceIndex, nodesToVerify);
                 }
+                
+                for (int i = insertedPath.size() - 1; i >= 0; i--) {
+                    List<E> pathOfLengthI = insertedPath.subList(0, i);
+                    Element<Node<E>> bestAncestor = indicesByValue.find(firstPossibleElement, lastPossibleElement, pathOfLengthI);
+                    if (bestAncestor != null) {
+                        if (!bestAncestor.get().virtual) {
+                            throw new IllegalStateException();
+                        }
+                        insertIndex = data.indexOfNode(bestAncestor, ALL_NODES) + 1;
+                        break;
+                    }
+                }
+    
+                // insert the node as hidden by default - if we need to show this node,
+                // we'll change its state later and fire an 'insert' event then
+                addNode(inserted, HIDDEN_REAL, insertIndex);
+            } else {
+                // No actual change
+                inserted = null;
             }
-
-            // insert the node as hidden by default - if we need to show this node,
-            // we'll change its state later and fire an 'insert' event then
-            addNode(inserted, HIDDEN_REAL, insertIndex);
             return inserted;
         }
 
@@ -1003,8 +1030,11 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     /**
      * Remove the node at the specified index, firing all the required
      * notifications.
+     * 
+     * @return true if DELETE was done
      */
-    private void deleteAndDetachNode(int sourceIndex, List<Node<E>> nodesToVerify) {
+    protected boolean deleteAndDetachNode(int sourceIndex, List<Node<E>> nodesToVerify) {
+        boolean result = false;
         Node<E> node = data.get(sourceIndex, REAL_NODES).get();
 
         // if it has children, replace it with a virtual copy and schedule that for verification
@@ -1016,9 +1046,11 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
         // otherwise delete it directly
         } else {
+            result = true;
             Node<E> follower = node.next();
 
             deleteNode(node);
+            result = true;
 
             // remove the parent if necessary in the next iteration
             nodesToVerify.add(node.parent);
@@ -1026,6 +1058,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             // also remove the follower - it may have become redundant as well
             if(follower != null && follower.virtual) nodesToVerify.add(follower);
         }
+        return result;
     }
 
     /**
