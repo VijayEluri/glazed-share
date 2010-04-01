@@ -493,20 +493,31 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 nodeAttacher.nodesToAttach.queueNewNodeForInserting(inserted);
 
             } else if(type == ListEvent.UPDATE) {
-                // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
-//              boolean deleted = deleteAndDetachNode(sourceIndex, nodesToVerify);
-                
-                Node<E> oldNode = source.get(sourceIndex);
-                int oldIndex = indexOf(oldNode.getElement());
-
-                Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, nodesToVerify, oldIndex);
-                if (updated != null) {
+                boolean oldLogic = false;
+                if (oldLogic) {
+                    deleteAndDetachNode(sourceIndex, nodesToVerify);
+                    Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, null, -1);
                     nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
                 } else {
-                    // Only update index
-                    updates.addUpdate(oldIndex);
-                }
-                
+                    // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
+                    Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
+                    int oldIndex = -1;
+                    if (oldNode.element != null) {
+                        oldIndex = data.indexOfNode(oldNode.element, ALL_NODES);
+                    } else {
+                        // NOTE KI this should *NOT* occur
+                        oldIndex = -1;
+                    }
+    
+                    Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, nodesToVerify, oldIndex);
+                    if (updated != null) {
+                        nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
+                    } else {
+                        // Only update visible index
+                        int visibleIndex = data.indexOfNode(oldNode.element, VISIBLE_NODES);
+                        updates.addUpdate(visibleIndex);
+                    }
+                }                
             } else if(type == ListEvent.DELETE) {
                 deleteAndDetachNode(sourceIndex, nodesToVerify);
             }
