@@ -101,6 +101,8 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * The format is used to obtain path information from list elements.
      */
     private Format<E> format;
+    
+    private boolean mAvoidRemoteInUpdate;
 
     /**
      * Create a new TreeList that adds hierarchy to the specified source list.
@@ -493,7 +495,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 nodeAttacher.nodesToAttach.queueNewNodeForInserting(inserted);
 
             } else if(type == ListEvent.UPDATE) {
-                boolean oldLogic = false;
+                boolean oldLogic = !isAvoidRemoteInUpdate();
                 if (oldLogic) {
                     deleteAndDetachNode(sourceIndex, nodesToVerify);
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, null, -1);
@@ -1835,6 +1837,18 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
         // make sure we don't have a trailing sibling
         assert(lastChildSeen == null || lastChildSeen.siblingAfter == null);
+    }
+
+    /**
+     * @return true if remove is avoided in update to avoid loosing selection.
+     * By default false
+     */
+    public boolean isAvoidRemoteInUpdate() {
+        return mAvoidRemoteInUpdate;
+    }
+
+    public void setAvoidRemoteInUpdate(boolean pAvoidRemoteInUpdate) {
+        mAvoidRemoteInUpdate = pAvoidRemoteInUpdate;
     }
 
     private static class FakeElement implements Element {
