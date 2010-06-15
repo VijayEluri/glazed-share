@@ -123,6 +123,9 @@ public class TreeTableCellRenderer implements TableCellRenderer {
         return component;
     }
     
+    public TreeTableCellPanel getTreeTableCellPanel() {
+        return component;
+    }
 
     /**
      * Returns the number of pixels to indent the contents of the renderer.

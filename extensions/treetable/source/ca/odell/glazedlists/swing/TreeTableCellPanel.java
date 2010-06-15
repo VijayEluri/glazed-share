@@ -64,7 +64,11 @@ public class TreeTableCellPanel extends JPanel {
     private Component nodeComponent;
 
     public TreeTableCellPanel() {
-        super(new TreeTableCellLayout());
+        this(new TreeTableCellLayout());
+    }
+    
+    public TreeTableCellPanel(TreeTableCellLayout pLayout) {
+        super(pLayout);
         expanderButton = createExpanderButton();
     }
     
@@ -130,7 +134,13 @@ public class TreeTableCellPanel extends JPanel {
         // taking care to give the nodeComponent *ALL* excess space (not just its preferred size)
         removeAll();
         add(getSpacer(indent), TreeTableCellLayout.INDENTER);
-        add(showExpanderButton ? expanderButton : createSpacer(UIManager.getIcon("Tree.expandedIcon").getIconWidth()), TreeTableCellLayout.EXPANDER);
+        if (showExpanderButton) {
+            add(expanderButton, TreeTableCellLayout.EXPANDER);
+        } else {
+            final Dimension prefSize = expanderButton.getPreferredSize();
+            Component expandSpacer = createSpacer(prefSize.width);
+            add(expandSpacer, TreeTableCellLayout.EXPANDER);
+        }
         add(getSpacer(spacer), TreeTableCellLayout.SPACER);
         add(nodeComponent, TreeTableCellLayout.NODE_COMPONENT);
 
@@ -291,7 +301,7 @@ public class TreeTableCellPanel extends JPanel {
      * component. When insufficient space exists for all 4 components, they are
      * simply cropped.
      */
-    private static class TreeTableCellLayout implements LayoutManager2 {
+    public static class TreeTableCellLayout implements LayoutManager2 {
 
         // constraints Objects to be used when adding components to the layout
         public static final Object INDENTER = new Object();
@@ -300,10 +310,10 @@ public class TreeTableCellPanel extends JPanel {
         public static final Object NODE_COMPONENT = new Object();
 
         // each of the known components layed out by this layout manager
-        private Component indenter;
-        private Component expander;
-        private Component spacer;
-        private Component nodeComponent;
+        protected Component indenter;
+        protected Component expander;
+        protected Component spacer;
+        protected Component nodeComponent;
 
         public void addLayoutComponent(Component comp, Object constraints) {
             if (constraints == INDENTER) indenter = comp;
@@ -341,8 +351,9 @@ public class TreeTableCellPanel extends JPanel {
             if (availableWidth > 0 && expander != null) {
                 int expanderButtonX = totalWidth - availableWidth;
                 int expanderButtonY = insets.top;
-                int expanderButtonWidth = expander.getPreferredSize().width;
-                int expanderButtonHeight = expander.getPreferredSize().height;
+                final Dimension prefSize = expander.getPreferredSize();
+                int expanderButtonWidth = prefSize.width;
+                int expanderButtonHeight = prefSize.height;
 
                 if (expanderButtonHeight > totalHeight)
                     expanderButtonHeight = totalHeight;
