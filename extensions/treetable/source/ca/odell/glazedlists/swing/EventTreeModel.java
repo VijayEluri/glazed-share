@@ -8,6 +8,7 @@ import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.TreeList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import javax.swing.JTree;
 import javax.swing.event.TreeModelEvent;
@@ -56,7 +57,8 @@ public class EventTreeModel<E> implements TreeModel, ListEventListener<E> {
     public EventTreeModel(TreeList<E> source) {
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventTableModel
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             disposeSwingThreadSource = !GlazedListsSwing.isSwingThreadProxyList(source);
             swingThreadSource = disposeSwingThreadSource ? GlazedListsSwing.swingThreadProxyList(source) : (TransformedList) source;
@@ -64,7 +66,7 @@ public class EventTreeModel<E> implements TreeModel, ListEventListener<E> {
             // prepare listeners
             swingThreadSource.addListEventListener(this);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
 
         this.treeList = source;

@@ -9,6 +9,7 @@ import ca.odell.glazedlists.SortedList;
 import ca.odell.glazedlists.gui.AdvancedTableFormat;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.impl.sort.TableColumnComparator;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.util.*;
 
@@ -223,11 +224,12 @@ public class EventListJXTableSorting {
             }
 
             // apply this comparator to the sortedlist
-            sortedList.getReadWriteLock().writeLock().lock();
+            final Lock writeLock = sortedList.getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 sortedList.setComparator(comparator);
             } finally {
-                sortedList.getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
 

@@ -13,6 +13,8 @@ import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.matchers.AbstractMatcherEditor;
 import ca.odell.glazedlists.matchers.Matcher;
 import ca.odell.glazedlists.matchers.Matchers;
+import ca.odell.glazedlists.util.concurrent.Lock;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -225,21 +227,23 @@ final class TableCheckFilterList<S, E> extends TransformedList<S, E> implements 
      */
     public void widgetSelected(SelectionEvent e) {
         if(e.detail == SWT.CHECK) {
-            getReadWriteLock().writeLock().lock();
+            final Lock writeLock = getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 updateItemChecked((TableItem)e.item);
             } finally {
-                getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
     }
     public void widgetDefaultSelected(SelectionEvent e) {
         if(e.detail == SWT.CHECK) {
-            getReadWriteLock().writeLock().lock();
+            final Lock writeLock = getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 updateItemChecked((TableItem)e.item);
             } finally {
-                getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
     }

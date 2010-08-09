@@ -11,6 +11,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 
 import ca.odell.glazedlists.TreeList;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 /**
  * This renderer removes some of the burden of producing an appropriate looking
@@ -94,7 +95,8 @@ public class TreeTableCellRenderer implements TableCellRenderer {
      * {@link TableCellRenderer}.
      */
     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-        treeList.getReadWriteLock().readLock().lock();
+        final Lock readLock = treeList.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             // read information about the tree node from the TreeList
             treeNodeData.setDepth(treeList.depth(row));
@@ -102,7 +104,7 @@ public class TreeTableCellRenderer implements TableCellRenderer {
             treeNodeData.setHasChildren(treeList.hasChildren(row));
             treeNodeData.setAllowsChildren(treeList.getAllowsChildren(row));
         } finally {
-            treeList.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
 
         // if the delegate renderer accepts TreeNodeData, give it

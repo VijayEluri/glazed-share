@@ -6,6 +6,7 @@ package ca.odell.glazedlists.impl;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.event.ListEvent;
+import ca.odell.glazedlists.util.concurrent.Lock;
 import ca.odell.glazedlists.util.concurrent.ReadWriteLock;
 
 import java.util.Collection;
@@ -59,22 +60,24 @@ public final class ThreadSafeList<E> extends TransformedList<E, E> {
     /** {@inheritDoc} */
     @Override
     public E get(int index) {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.get(index);
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public int size() {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.size();
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -87,220 +90,240 @@ public final class ThreadSafeList<E> extends TransformedList<E, E> {
     /** {@inheritDoc} */
     @Override
     public boolean contains(Object object) {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.contains(object);
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean containsAll(Collection<?> collection) {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.containsAll(collection);
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean equals(Object object) {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.equals(object);
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public int hashCode() {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.hashCode();
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public int indexOf(Object object) {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.indexOf(object);
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public int lastIndexOf(Object object) {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.lastIndexOf(object);
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean isEmpty() {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.isEmpty();
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public Object[] toArray() {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.toArray();
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public <T> T[] toArray(T[] array) {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.toArray(array);
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean add(E value) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.add(value);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
         
     /** {@inheritDoc} */
     @Override
     public boolean remove(Object toRemove) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.remove(toRemove);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean addAll(Collection<? extends E> values) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.addAll(values);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean addAll(int index, Collection<? extends E> values) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.addAll(index, values);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean removeAll(Collection<?> values) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.removeAll(values);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean retainAll(Collection<?> values) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.retainAll(values);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
         
     /** {@inheritDoc} */
     @Override
     public void clear() {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             source.clear();
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public E set(int index, E value) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.set(index, value);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public void add(int index, E value) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             source.add(index, value);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** {@inheritDoc} */
     @Override
     public E remove(int index) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return source.remove(index);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
     
     /** {@inheritDoc} */
     @Override
     public String toString() {
-        getReadWriteLock().readLock().lock();
+        final Lock readLock = getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.toString();
         } finally {
-            getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 }

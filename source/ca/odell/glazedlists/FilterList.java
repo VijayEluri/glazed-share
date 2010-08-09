@@ -10,6 +10,7 @@ import ca.odell.glazedlists.impl.adt.BarcodeIterator;
 import ca.odell.glazedlists.matchers.Matcher;
 import ca.odell.glazedlists.matchers.MatcherEditor;
 import ca.odell.glazedlists.matchers.Matchers;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 /**
  * An {@link EventList} that shows a subset of the elements of a source
@@ -266,11 +267,12 @@ public final class FilterList<E> extends TransformedList<E,E> {
      * the possible <code>changeType</code>s.
      */
     private void changeMatcherWithLocks(MatcherEditor<? super E> matcherEditor, Matcher<? super E> matcher, int changeType) {
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             changeMatcher(matcherEditor, matcher, changeType);
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

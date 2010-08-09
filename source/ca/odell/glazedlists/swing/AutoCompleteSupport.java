@@ -20,6 +20,7 @@ import ca.odell.glazedlists.impl.swing.ComboBoxPopupLocationFix;
 import ca.odell.glazedlists.matchers.Matcher;
 import ca.odell.glazedlists.matchers.Matchers;
 import ca.odell.glazedlists.matchers.TextMatcherEditor;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -472,7 +473,8 @@ public final class AutoCompleteSupport<E> {
 
         // lock the items list for reading since we want to prevent writes
         // from occurring until we fully initialize this AutoCompleteSupport
-        items.getReadWriteLock().readLock().lock();
+        final Lock readLock = items.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             // build the ComboBoxModel capable of filtering its values
             this.filterMatcherEditor = new TextMatcherEditor(filterator == null ? new DefaultTextFilterator() : filterator);
@@ -491,7 +493,7 @@ public final class AutoCompleteSupport<E> {
             this.allItemsUnfiltered.addMemberList(this.firstItem);
             this.allItemsUnfiltered.addMemberList(this.items);
         } finally {
-            items.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
 
         // customize the comboBox
@@ -1140,14 +1142,15 @@ public final class AutoCompleteSupport<E> {
         checkAccessThread();
 
         doNotChangeDocument = true;
-        firstItem.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = firstItem.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             if (firstItem.isEmpty())
                 firstItem.add(item);
             else
                 firstItem.set(0, item);
         } finally {
-            firstItem.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
             doNotChangeDocument = false;
         }
     }
@@ -1160,11 +1163,12 @@ public final class AutoCompleteSupport<E> {
      *      or <tt>null</tt> if no first item has been set
      */
     public E getFirstItem() {
-        firstItem.getReadWriteLock().readLock().lock();
+        final Lock readLock = firstItem.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return firstItem.isEmpty() ? null : firstItem.get(0);
         } finally {
-            firstItem.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -1180,11 +1184,12 @@ public final class AutoCompleteSupport<E> {
         checkAccessThread();
 
         doNotChangeDocument = true;
-        firstItem.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = firstItem.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             return firstItem.isEmpty() ? null : firstItem.remove(0);
         } finally {
-            firstItem.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
             doNotChangeDocument = false;
         }
     }
@@ -1220,7 +1225,8 @@ public final class AutoCompleteSupport<E> {
         if (this.comboBox == null)
             throw new IllegalStateException("This AutoCompleteSupport has already been uninstalled");
 
-        items.getReadWriteLock().readLock().lock();
+        final Lock readLock = items.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             // 1. stop listening for changes
             this.comboBox.removePropertyChangeListener("UI", this.uiWatcher);
@@ -1248,7 +1254,7 @@ public final class AutoCompleteSupport<E> {
             // null out the comboBox to indicate that this support class is uninstalled
             this.comboBox = null;
         } finally {
-            items.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 

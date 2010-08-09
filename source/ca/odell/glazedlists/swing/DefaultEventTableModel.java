@@ -9,6 +9,7 @@ import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.gui.AdvancedTableFormat;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.gui.WritableTableFormat;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.awt.EventQueue;
 
@@ -82,11 +83,12 @@ public class DefaultEventTableModel<E> extends AbstractTableModel implements Adv
      * {@inheritDoc}
      */
     public E getElementAt(int index) {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.get(index);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -142,11 +144,12 @@ public class DefaultEventTableModel<E> extends AbstractTableModel implements Adv
      * The number of rows equals the number of entries in the source event list.
      */
     public int getRowCount() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.size();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -176,11 +179,12 @@ public class DefaultEventTableModel<E> extends AbstractTableModel implements Adv
      * Retrieves the value at the specified location of the table.
      */
     public Object getValueAt(int row, int column) {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return tableFormat.getColumnValue(source.get(row), column);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -194,12 +198,13 @@ public class DefaultEventTableModel<E> extends AbstractTableModel implements Adv
         if (!(tableFormat instanceof WritableTableFormat))
             return false;
 
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             final E toEdit = source.get(row);
             return ((WritableTableFormat<E>) tableFormat).isEditable(toEdit, column);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -217,7 +222,8 @@ public class DefaultEventTableModel<E> extends AbstractTableModel implements Adv
         if (!(tableFormat instanceof WritableTableFormat))
             throw new UnsupportedOperationException("Unexpected setValueAt() on read-only table");
 
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             // get the object being edited from the source list
             final E baseObject = source.get(row);
@@ -238,7 +244,7 @@ public class DefaultEventTableModel<E> extends AbstractTableModel implements Adv
                     source.set(row, updatedObject);
             }
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

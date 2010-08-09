@@ -181,7 +181,8 @@ public class ThreadContentionPerformance {
 				// Read something
 				long time = System.currentTimeMillis();
 //				long time = System.nanoTime();
-				list.getReadWriteLock().readLock().lock();
+				final Lock readLock = list.getReadWriteLock().readLock();
+                readLock.lock();
 				try {
 					int size = list.size();
 
@@ -189,7 +190,7 @@ public class ThreadContentionPerformance {
 					Object obj = list.get(random.nextInt(size));
 				}
 				finally {
-					list.getReadWriteLock().readLock().unlock();
+					readLock.unlock();
 
 					total_time += System.currentTimeMillis() - time;
 //					total_time += ( System.nanoTime() - time );
@@ -249,12 +250,13 @@ public class ThreadContentionPerformance {
 				// Write something
 				long time = System.currentTimeMillis();
 //				long time = System.nanoTime();
-				list.getReadWriteLock().writeLock().lock();
+				final Lock writeLock = list.getReadWriteLock().writeLock();
+                writeLock.lock();
 				try {
 					list.add(new Long(System.currentTimeMillis()));
 				}
 				finally {
-					list.getReadWriteLock().writeLock().unlock();
+					writeLock.unlock();
 
 					total_time += System.currentTimeMillis() - time;
 //					total_time += ( System.nanoTime() - time );

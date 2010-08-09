@@ -5,6 +5,7 @@ package ca.odell.glazedlists.impl.rbp;
 
 // NIO is used for BRP
 import ca.odell.glazedlists.impl.io.Bufferlo;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -251,7 +252,8 @@ class PeerResource {
         if(block.getSessionId() != sessionId) throw new IllegalStateException();
 
         // handle the update
-        resource.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = resource.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             // confirm this update is consistent with the update ID
             if(block.getUpdateId() != (resourceUpdateId+1)) throw new IllegalStateException("Expected update id " + (resourceUpdateId+1) + " but found " + block.getUpdateId());
@@ -260,7 +262,7 @@ class PeerResource {
             // update state and propagate
             resourceListener.resourceUpdated(resource, block.getPayload());
         } finally {
-            resource.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
     private void remoteSubscribe(ResourceConnection subscriber, PeerBlock block) {
@@ -269,12 +271,13 @@ class PeerResource {
             // save the update id and a snapshot
             int updateId = -1;
             Bufferlo snapshot = null;
-            resource.getReadWriteLock().writeLock().lock();
+            final Lock writeLock = resource.getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 updateId = resourceUpdateId;
                 snapshot = resource.toSnapshot();
             } finally {
-                resource.getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
             
             // create the subscription
@@ -295,7 +298,8 @@ class PeerResource {
     }
     private void remoteSubscribeConfirm(ResourceConnection publisher, PeerBlock block) {
         // handle the confirm
-        resource.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = resource.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             // apply locally
             resource.fromSnapshot(block.getPayload());
@@ -303,7 +307,7 @@ class PeerResource {
             resourceUpdateId = block.getUpdateId();
             //resourceListener.resourceUpdated(resource, block.getPayload());
         } finally {
-            resource.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
         
         // save a session cookie to verify this is the same source

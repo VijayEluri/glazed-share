@@ -1,6 +1,7 @@
 package ca.odell.glazedlists.swing;
 
 import ca.odell.glazedlists.TreeList;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import javax.swing.*;
 import javax.swing.event.CellEditorListener;
@@ -87,7 +88,8 @@ public class TreeTableCellEditor extends AbstractCellEditor implements TableCell
      * {@link TableCellEditor}.
      */
     public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-        treeList.getReadWriteLock().readLock().lock();
+        final Lock readLock = treeList.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             // read information about the tree node from the TreeList
             treeNodeData.setDepth(treeList.depth(row));
@@ -95,7 +97,7 @@ public class TreeTableCellEditor extends AbstractCellEditor implements TableCell
             treeNodeData.setHasChildren(treeList.hasChildren(row));
             treeNodeData.setAllowsChildren(treeList.getAllowsChildren(row));
         } finally {
-            treeList.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
 
         // if the delegate editor accepts TreeNodeData, give it

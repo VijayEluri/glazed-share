@@ -6,6 +6,7 @@ package ca.odell.glazedlists.swing;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.ListSelection;
 import ca.odell.glazedlists.matchers.Matcher;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +87,8 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
     public DefaultEventSelectionModel(EventList<E> source) {
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventSelectionModel
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
         	this.source = source;
 
@@ -94,7 +96,7 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
             this.listSelection = new ListSelection<E>(source);
             this.listSelection.addSelectionListener(new SwingSelectionListener());
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -102,11 +104,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      * {@inheritDoc}
      */
     public EventList<E> getSelected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return listSelection.getSelected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -114,11 +117,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      * {@inheritDoc}
      */
     public EventList<E> getTogglingSelected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return listSelection.getTogglingSelected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -126,11 +130,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      * {@inheritDoc}
      */
     public EventList<E> getDeselected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return listSelection.getDeselected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -138,11 +143,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      * {@inheritDoc}
      */
     public EventList<E> getTogglingDeselected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return listSelection.getTogglingDeselected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -194,11 +200,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      * {@inheritDoc}
      */
     public void invertSelection() {
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.invertSelection();
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
@@ -216,11 +223,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      */
     public void setSelectionInterval(int index0, int index1) {
         if(!enabled) return;
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.setSelection(index0, index1);
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
@@ -229,11 +237,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      */
     public void addSelectionInterval(int index0, int index1) {
         if(!enabled) return;
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.select(index0, index1);
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
     /**
@@ -242,11 +251,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
     public void removeSelectionInterval(int index0, int index1) {
         if(!enabled) return;
         if(index0 == 0 && index1 == 0 && source.isEmpty()) return; // hack for Java 5 compatibility
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.deselect(index0, index1);
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
@@ -273,11 +283,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      */
     public void setAnchorSelectionIndex(int anchorSelectionIndex) {
         if(!enabled) return;
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.setAnchorSelectionIndex(anchorSelectionIndex);
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
     /**
@@ -291,11 +302,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      */
     public void setLeadSelectionIndex(int leadSelectionIndex) {
         if(!enabled) return;
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.setLeadSelectionIndex(leadSelectionIndex);
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
@@ -318,22 +330,24 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      */
     public void clearSelection() {
         if(!enabled) return;
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.deselectAll();
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
     /**
      * Returns true if no indices are selected.
      */
     public boolean isSelectionEmpty() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return listSelection.getSelected().isEmpty();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -359,13 +373,14 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
         // fire one extra change containing all changes in this set
         if(!valueIsAdjusting) {
             if(fullChangeStart != -1 && fullChangeFinish != -1) {
-                source.getReadWriteLock().writeLock().lock();
+                final Lock writeLock = source.getReadWriteLock().writeLock();
+                writeLock.lock();
                 try {
                     fireSelectionChanged(fullChangeStart, fullChangeFinish);
                     fullChangeStart = -1;
                     fullChangeFinish = -1;
                 } finally {
-                    source.getReadWriteLock().writeLock().unlock();
+                    writeLock.unlock();
                 }
             }
         }
@@ -382,11 +397,12 @@ public class DefaultEventSelectionModel<E> implements AdvancedListSelectionModel
      * Set the selection mode.
      */
     public void setSelectionMode(int selectionMode) {
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             listSelection.setSelectionMode(selectionMode);
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

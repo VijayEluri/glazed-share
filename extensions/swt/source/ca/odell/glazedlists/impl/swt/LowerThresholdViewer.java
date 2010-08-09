@@ -5,6 +5,8 @@ package ca.odell.glazedlists.impl.swt;
 
 // to interact with Sliders
 import ca.odell.glazedlists.ThresholdList;
+import ca.odell.glazedlists.util.concurrent.Lock;
+
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 
@@ -40,7 +42,8 @@ public class LowerThresholdViewer implements SelectionListener {
      * Allows this Viewer to respond to changes to the BoundedRangeControl
      */
     public void widgetSelected(SelectionEvent e) {
-        target.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = target.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             target.setLowerThreshold(control.getSelection());
             if(maximum != control.getMaximum()) {
@@ -48,7 +51,7 @@ public class LowerThresholdViewer implements SelectionListener {
                 target.setUpperThreshold(maximum);
             }
         } finally {
-            target.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

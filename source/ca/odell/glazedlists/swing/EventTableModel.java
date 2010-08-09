@@ -10,6 +10,7 @@ import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.GlazedLists;
 import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.gui.TableFormat;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 /**
  * A {@link DefaultEventTableModel} that silently wraps it's source list in a
@@ -60,7 +61,8 @@ public class EventTableModel<E> extends DefaultEventTableModel<E> {
         // should be considered to be non-Thread Safe, so source lists should be locked
         // before constructing a DefaultEventTableModel if there are any potential
         // race conditions
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             final TransformedList<E,E> decorated = createSwingThreadProxyList(source);
 
@@ -72,7 +74,7 @@ public class EventTableModel<E> extends DefaultEventTableModel<E> {
                 this.source.addListEventListener(this);
             }
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
 
     }

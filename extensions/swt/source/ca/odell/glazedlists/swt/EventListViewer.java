@@ -7,6 +7,8 @@ import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
+import ca.odell.glazedlists.util.concurrent.Lock;
+
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.events.SelectionListener;
@@ -50,7 +52,8 @@ public class EventListViewer<E> implements ListEventListener<E> {
     public EventListViewer(EventList<E> source, List list, ILabelProvider labelProvider) {
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventListViewer
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             swtThreadSource = GlazedListsSWT.swtThreadProxyList(source, list.getDisplay());
             this.list = list;
@@ -67,7 +70,7 @@ public class EventListViewer<E> implements ListEventListener<E> {
             // listen for changes
             swtThreadSource.addListEventListener(this);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -90,11 +93,12 @@ public class EventListViewer<E> implements ListEventListener<E> {
      * viewed Table that are not currently selected.
      */
     public EventList<E> getDeselected() {
-        swtThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getDeselected();
         } finally {
-            swtThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -107,11 +111,12 @@ public class EventListViewer<E> implements ListEventListener<E> {
      * {@link IllegalArgumentException} is thrown
      */
     public EventList<E> getTogglingDeselected() {
-        swtThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getTogglingDeselected();
         } finally {
-            swtThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -120,11 +125,12 @@ public class EventListViewer<E> implements ListEventListener<E> {
      * viewed Table that are currently selected.
      */
     public EventList<E> getSelected() {
-        swtThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getSelected();
         } finally {
-            swtThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -137,11 +143,12 @@ public class EventListViewer<E> implements ListEventListener<E> {
      * {@link IllegalArgumentException} is thrown.
      */
     public EventList<E> getTogglingSelected() {
-        swtThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getTogglingSelected();
         } finally {
-            swtThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 

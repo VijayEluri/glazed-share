@@ -5,6 +5,7 @@ package ca.odell.glazedlists.swing;
 
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.TransformedList;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import javax.swing.JList;
 import javax.swing.ListModel;
@@ -78,7 +79,8 @@ public class EventListModel<E> extends DefaultEventListModel<E> {
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventTableModel
         EventList<E> result = source;
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             final TransformedList<E,E> decorated = createSwingThreadProxyList(source);
 
@@ -88,7 +90,7 @@ public class EventListModel<E> extends DefaultEventListModel<E> {
                 result = decorated;
             }
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
         return result;
     }

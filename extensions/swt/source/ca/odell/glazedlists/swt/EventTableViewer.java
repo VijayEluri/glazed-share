@@ -11,6 +11,7 @@ import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.impl.adt.Barcode;
 import ca.odell.glazedlists.impl.adt.BarcodeIterator;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionListener;
@@ -123,7 +124,8 @@ public class EventTableViewer<E> implements ListEventListener<E> {
 
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventTableViewer
-        source.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = source.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             // insert a list to move ListEvents to the SWT event dispatch thread
             final TransformedList<E,E> decorated = createSwtThreadProxyList(source, table.getDisplay());
@@ -162,7 +164,7 @@ public class EventTableViewer<E> implements ListEventListener<E> {
             // *before* the SelectionManager's ListSelection, which is the correct relative order of notification)
             this.source.getPublisher().setRelatedListener(selection.getSelectionList(), this);
         } finally {
-            source.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
     /**
@@ -255,7 +257,8 @@ public class EventTableViewer<E> implements ListEventListener<E> {
         if (maxIndex < 0) return;
         // Disable redraws so that the table is updated in bulk
         table.setRedraw(false);
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             // reprocess all table items between indexes 0 and maxIndex
             for (int i = 0; i <= maxIndex; i++) {
@@ -267,7 +270,7 @@ public class EventTableViewer<E> implements ListEventListener<E> {
                 }
             }
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
         // Re-enable redraws to update the table
         table.setRedraw(true);
@@ -309,11 +312,12 @@ public class EventTableViewer<E> implements ListEventListener<E> {
      * Gets all checked items.
      */
     public List<E> getAllChecked() {
-        checkFilterList.getReadWriteLock().readLock().lock();
+        final Lock readLock = checkFilterList.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return checkFilterList.getAllChecked();
         } finally {
-            checkFilterList.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -329,11 +333,12 @@ public class EventTableViewer<E> implements ListEventListener<E> {
      * viewed {@link Table} that are not currently selected.
      */
     public EventList<E> getDeselected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getDeselected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -346,11 +351,12 @@ public class EventTableViewer<E> implements ListEventListener<E> {
      * {@link IllegalArgumentException} is thrown
      */
     public EventList<E> getTogglingDeselected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getTogglingDeselected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -359,11 +365,12 @@ public class EventTableViewer<E> implements ListEventListener<E> {
      * viewed {@link Table} that are currently selected.
      */
     public EventList<E> getSelected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getSelected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -376,11 +383,12 @@ public class EventTableViewer<E> implements ListEventListener<E> {
      * {@link IllegalArgumentException} is thrown.
      */
     public EventList<E> getTogglingSelected() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return selection.getSelectionList().getTogglingSelected();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 

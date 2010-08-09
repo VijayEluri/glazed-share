@@ -13,6 +13,7 @@ import ca.odell.glazedlists.impl.rbp.Resource;
 import ca.odell.glazedlists.impl.rbp.ResourceListener;
 import ca.odell.glazedlists.impl.rbp.ResourceStatus;
 import ca.odell.glazedlists.impl.rbp.ResourceStatusListener;
+import ca.odell.glazedlists.util.concurrent.Lock;
 import ca.odell.glazedlists.util.concurrent.ReadWriteLock;
 
 import java.io.IOException;
@@ -202,13 +203,14 @@ public final class NetworkList<E> extends TransformedList<E, E> {
 
         /** {@inheritDoc} */
         public Bufferlo toSnapshot() {
-            getReadWriteLock().writeLock().lock();
+            final Lock writeLock = getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 return ListEventToBytes.toBytes(NetworkList.this, byteCoder);
             } catch(IOException e) {
                 throw new IllegalStateException(e.getMessage());
             } finally {
-                getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
     
@@ -219,7 +221,8 @@ public final class NetworkList<E> extends TransformedList<E, E> {
         
         /** {@inheritDoc} */
         private void applyCodedEvent(Bufferlo data) {
-            getReadWriteLock().writeLock().lock();
+            final Lock writeLock = getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 updates.beginEvent(true);
                 ListEventToBytes.toListEvent(data, source, byteCoder);
@@ -227,7 +230,7 @@ public final class NetworkList<E> extends TransformedList<E, E> {
             } catch(IOException e) {
                 throw new IllegalStateException(e.getMessage());
             } finally {
-                getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
         

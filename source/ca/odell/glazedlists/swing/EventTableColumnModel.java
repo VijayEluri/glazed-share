@@ -8,6 +8,7 @@ import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.impl.IteratorAsEnumeration;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import javax.swing.*;
 import javax.swing.event.*;
@@ -67,7 +68,8 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
 
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventTableColumnModel
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             // ensure all of the TableColumns are non-null
             for (int i = 0, n = source.size(); i < n; i++) {
@@ -83,27 +85,29 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
             swingThreadSource = disposeSwingThreadSource ? GlazedListsSwing.swingThreadProxyList(source) : (TransformedList<T, T>) source;
             swingThreadSource.addListEventListener(this);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** @inheritDoc */
     public void addColumn(TableColumn column) {
-        swingThreadSource.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = swingThreadSource.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             swingThreadSource.add((T) column);
         } finally {
-            swingThreadSource.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
     /** @inheritDoc */
     public void removeColumn(TableColumn column) {
-        swingThreadSource.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = swingThreadSource.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             swingThreadSource.remove(column);
         } finally {
-            swingThreadSource.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
@@ -126,7 +130,8 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
             return;
         }
 
-        swingThreadSource.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = swingThreadSource.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             final boolean selected = selectionModel.isSelectedIndex(columnIndex);
             swingThreadSource.add(newIndex, swingThreadSource.remove(columnIndex));
@@ -135,7 +140,7 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
             if (selected)
                 selectionModel.addSelectionInterval(newIndex, newIndex);
         } finally {
-            swingThreadSource.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 
@@ -154,11 +159,12 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
 
     /** @inheritDoc */
     public int getColumnCount() {
-        swingThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swingThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return swingThreadSource.size();
         } finally {
-            swingThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -172,7 +178,8 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
         if (identifier == null)
             throw new IllegalArgumentException("identifier is null");
 
-        swingThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swingThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             for (int i = 0, n = swingThreadSource.size(); i < n; i++) {
                 if (identifier.equals(swingThreadSource.get(i).getIdentifier()))
@@ -181,17 +188,18 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
 
             throw new IllegalArgumentException("Identifier not found");
         } finally {
-            swingThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
     /** @inheritDoc */
     public TableColumn getColumn(int columnIndex) {
-        swingThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swingThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return swingThreadSource.get(columnIndex);
         } finally {
-            swingThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -199,7 +207,8 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
     public int getColumnIndexAtX(int x) {
         if (x < 0) return -1;
 
-        swingThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swingThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             for (int i = 0, n = swingThreadSource.size(); i < n; i++) {
                 TableColumn column = swingThreadSource.get(i);
@@ -208,7 +217,7 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
                     return i;
             }
         } finally {
-            swingThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
 
         return -1;
@@ -226,13 +235,14 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
      * Recalculates the total combined width of all columns.
      */
     private void recalcWidthCache() {
-        swingThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swingThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             totalColumnWidth = 0;
             for (int i = 0, n = swingThreadSource.size(); i < n; i++)
                 totalColumnWidth += swingThreadSource.get(i).getWidth();
         } finally {
-            swingThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -398,7 +408,8 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
      * disposed.
      */
     public void dispose() {
-        swingThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swingThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
 
         try {
             // stop listening to each of the TableColumns for property changes
@@ -412,7 +423,7 @@ public class EventTableColumnModel<T extends TableColumn> implements TableColumn
                 swingThreadSource.dispose();
 
         } finally {
-            swingThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
 
         // this encourages exceptions to be thrown if this model is incorrectly accessed again

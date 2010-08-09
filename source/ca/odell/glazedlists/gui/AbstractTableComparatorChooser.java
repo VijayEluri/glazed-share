@@ -9,6 +9,7 @@ import ca.odell.glazedlists.impl.gui.MouseOnlySortingStrategy;
 import ca.odell.glazedlists.impl.gui.SortingState;
 import ca.odell.glazedlists.impl.gui.MouseOnlySortingStrategyWithUndo;
 import ca.odell.glazedlists.impl.sort.TableColumnComparator;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -156,12 +157,13 @@ public abstract class AbstractTableComparatorChooser<E> {
         final Comparator<E> rebuiltComparator = sortingState.buildComparator();
 
         // select the new comparator
-        sortedList.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = sortedList.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             sortedListComparator = rebuiltComparator;
             sortedList.setComparator(rebuiltComparator);
         } finally {
-            sortedList.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

@@ -7,6 +7,7 @@ import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.impl.beans.BeanProperty;
 import ca.odell.glazedlists.matchers.Matcher;
 import ca.odell.glazedlists.matchers.Matchers;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -166,11 +167,12 @@ public final class Processors {
     private static class AddObjectToTargetListProcessor<T> implements PopProcessor<EventList<T>,T> {
         public void process(EventList<T> baseObject, T value) {
             // add the object to the targetList in a thread-safe manner
-            baseObject.getReadWriteLock().writeLock().lock();
+            final Lock writeLock = baseObject.getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 baseObject.add(value);
             } finally {
-                baseObject.getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
     }

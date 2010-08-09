@@ -5,6 +5,8 @@ package ca.odell.glazedlists.swt;
 
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.ListSelection;
+import ca.odell.glazedlists.util.concurrent.Lock;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -127,12 +129,13 @@ class SelectionManager<E> {
             // don't set selection on the SelectionList if it has already been set
             if(!selectionInProgress) {
                 selectionInProgress = true;
-                selection.getSource().getReadWriteLock().writeLock().lock();
+                final Lock writeLock = selection.getSource().getReadWriteLock().writeLock();
+                writeLock.lock();
                 try {
                     selection.setSelection(selectable.getSelectionIndex());
                 } finally {
                     selectionInProgress = false;
-                    selection.getSource().getReadWriteLock().writeLock().unlock();
+                    writeLock.unlock();
                 }
             }
         }
@@ -158,12 +161,13 @@ class SelectionManager<E> {
             // don't set selection on the SelectionList if it has already been set
             if(!selectionInProgress) {
                 selectionInProgress = true;
-                selection.getSource().getReadWriteLock().writeLock().lock();
+                final Lock writeLock = selection.getSource().getReadWriteLock().writeLock();
+                writeLock.lock();
                 try {
                     selection.setSelection(selectable.getSelectionIndices());
                 } finally {
                     selectionInProgress = false;
-                    selection.getSource().getReadWriteLock().writeLock().unlock();
+                    writeLock.unlock();
                 }
             }
         }

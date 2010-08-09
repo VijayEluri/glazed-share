@@ -7,6 +7,8 @@ import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
+import ca.odell.glazedlists.util.concurrent.Lock;
+
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.widgets.Combo;
@@ -54,7 +56,8 @@ public class EventComboViewer<E> implements ListEventListener<E> {
     public EventComboViewer(EventList<E> source, Combo combo, ILabelProvider labelProvider) {
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventComboViewer
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             this.swtSource = GlazedListsSWT.swtThreadProxyList(source, combo.getDisplay());
             this.combo = combo;
@@ -68,7 +71,7 @@ public class EventComboViewer<E> implements ListEventListener<E> {
             // listen for changes
             swtSource.addListEventListener(this);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 

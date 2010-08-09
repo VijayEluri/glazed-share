@@ -6,6 +6,7 @@ package ca.odell.glazedlists.swing;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.matchers.Matcher;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.util.List;
 
@@ -72,12 +73,13 @@ public final class EventSelectionModel<E> implements AdvancedListSelectionModel<
     public EventSelectionModel(EventList<E> source) {
         // lock the source list for reading since we want to prevent writes
         // from occurring until we fully initialize this EventSelectionModel
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             swingThreadSource = GlazedListsSwing.swingThreadProxyList(source);
             delegateSelectionModel = new DefaultEventSelectionModel<E>(swingThreadSource);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 

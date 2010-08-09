@@ -7,6 +7,7 @@ import ca.odell.glazedlists.*;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.swing.*;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -376,13 +377,14 @@ public class IssuesBrowser implements Runnable {
         }
 
         public void actionPerformed(ActionEvent e) {
-            separatorList.getReadWriteLock().writeLock().lock();
+            final Lock writeLock = separatorList.getReadWriteLock().writeLock();
+            writeLock.lock();
             boolean collapsed;
             try {
                 collapsed = separator.getLimit() == 0;
                 separator.setLimit(collapsed ? Integer.MAX_VALUE : 0);
             } finally {
-                separatorList.getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
             expandButton.setIcon(collapsed ? COLLAPSED_ICON : EXPANDED_ICON);
         }

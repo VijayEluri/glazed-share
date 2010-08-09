@@ -11,6 +11,7 @@ import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.swing.GlazedListsSwing;
 import ca.odell.glazedlists.swing.TableComparatorChooser;
 import ca.odell.glazedlists.swing.TreeTableSupport;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.util.Comparator;
 import java.util.List;
@@ -45,7 +46,8 @@ public class FileBrowser implements Runnable {
         TreeList.Format<Entry> treeFormat = new EntryTreeFormat();
 
         EventList<Entry> sourceEntries = fileBrowserModel.getEntries();
-        sourceEntries.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = sourceEntries.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             EventList<Entry> entries = GlazedListsSwing.swingThreadProxyList(sourceEntries);
 
@@ -63,7 +65,7 @@ public class FileBrowser implements Runnable {
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setVisible(true);
         } finally {
-            sourceEntries.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
 
     }

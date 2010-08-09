@@ -4,6 +4,7 @@
 package ca.odell.glazedlists.swing;
 
 import ca.odell.glazedlists.*;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -36,7 +37,8 @@ class JXTableTestApp2 implements Runnable {
     }
 
     public void run() {
-        issues.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = issues.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             JTextField filterEdit = new JTextField(12);
             TextComponentMatcherEditor<Issue> textMatcherEditor = new TextComponentMatcherEditor<Issue>(filterEdit, new IssueTextFilterator());
@@ -67,7 +69,7 @@ class JXTableTestApp2 implements Runnable {
             frame.pack();
             frame.setVisible(true);
         } finally {
-            issues.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

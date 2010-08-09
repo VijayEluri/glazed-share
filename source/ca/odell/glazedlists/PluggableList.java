@@ -5,6 +5,7 @@ package ca.odell.glazedlists;
 
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventPublisher;
+import ca.odell.glazedlists.util.concurrent.Lock;
 import ca.odell.glazedlists.util.concurrent.ReadWriteLock;
 
 /**
@@ -102,7 +103,8 @@ public class PluggableList<E> extends TransformedList<E, E> {
      */
     public void setSource(EventList<E> source) {
         // lock the pipeline while the source list is swapped
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             if (this.source == null)
                 throw new IllegalStateException("setSource may not be called on a disposed PluggableList");
@@ -135,7 +137,7 @@ public class PluggableList<E> extends TransformedList<E, E> {
             // broadcast the ListEvent that describes the data change
             updates.commitEvent();
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

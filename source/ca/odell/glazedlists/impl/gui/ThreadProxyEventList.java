@@ -9,6 +9,7 @@ import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventAssembler;
 import ca.odell.glazedlists.event.ListEventListener;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -220,7 +221,8 @@ public abstract class ThreadProxyEventList<E> extends TransformedList<E, E> impl
          * new event is created with these changes properly.
          */
         public void run() {
-            getReadWriteLock().writeLock().lock();
+            final Lock writeLock = getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 // We need to apply the changes to the local cache immediately,
                 // before forwarding the event downstream to other listeners.
@@ -231,7 +233,7 @@ public abstract class ThreadProxyEventList<E> extends TransformedList<E, E> impl
                 updates.commitEvent();
             } finally {
                 scheduled = false;
-                getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
 

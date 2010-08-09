@@ -9,6 +9,7 @@ import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.gui.WritableTableFormat;
+import ca.odell.glazedlists.util.concurrent.Lock;
 import de.kupzog.ktable.KTable;
 import de.kupzog.ktable.KTableCellEditor;
 import de.kupzog.ktable.KTableCellRenderer;
@@ -91,11 +92,12 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // get regular cell content
         } else {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 return kTableFormat.getColumnValue(swtThreadSource.get(row - getFixedHeaderRowCount()), column);
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
         }
     }
@@ -108,11 +110,12 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // get regular row tooltips
         } else {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 return kTableFormat.getColumnTooltip(swtThreadSource.get(row - getFixedHeaderRowCount()), column);
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
         }
     }
@@ -125,12 +128,13 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // regular rows are editable if the tableformat is writable
         } else if(kTableFormat instanceof WritableTableFormat) {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 Object baseObject = swtThreadSource.get(row);
                 return kTableFormat.getColumnEditor(baseObject, column);
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
 
         // this table isn't editable
@@ -147,7 +151,8 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // regular rows are editable if the tableformat is writable
         } else if(kTableFormat instanceof WritableTableFormat) {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 WritableTableFormat writableTableFormat = (WritableTableFormat)kTableFormat;
                 Object baseObject = swtThreadSource.get(row - getFixedHeaderRowCount());
@@ -156,7 +161,7 @@ public class EventKTableModel implements KTableModel, ListEventListener {
                     swtThreadSource.set(row - getFixedHeaderRowCount(), updatedObject);
                 }
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
 
         // this table isn't editable
@@ -173,11 +178,12 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // regular rows may have a custom renderer
         } else {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 return kTableFormat.getColumnRenderer(swtThreadSource.get(row - getFixedHeaderRowCount()), column);
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
         }
     }
@@ -191,11 +197,12 @@ public class EventKTableModel implements KTableModel, ListEventListener {
     /** {@inheritDoc} */
     public int getRowCount() {
         // a row for every list element, plus the headers
-        swtThreadSource.getReadWriteLock().readLock().lock();
+        final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return swtThreadSource.size() + getFixedHeaderRowCount();
         } finally {
-            swtThreadSource.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -247,11 +254,12 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // regular row height
         } else if(row < getRowCount()) {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 return kTableFormat.getRowHeight(swtThreadSource.get(row - getFixedHeaderRowCount()));
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
 
         // KTable queries for heights beyond the table's rows
@@ -268,11 +276,12 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // regular rows may be resizable
         } else {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 return kTableFormat.isRowResizable(swtThreadSource.get(row - getFixedHeaderRowCount()));
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
         }
     }
@@ -290,11 +299,12 @@ public class EventKTableModel implements KTableModel, ListEventListener {
 
         // regular rows may be resizable
         } else {
-            swtThreadSource.getReadWriteLock().readLock().lock();
+            final Lock readLock = swtThreadSource.getReadWriteLock().readLock();
+            readLock.lock();
             try {
                 kTableFormat.setRowHeight(swtThreadSource.get(row - getFixedHeaderRowCount()), value);
             } finally {
-                swtThreadSource.getReadWriteLock().readLock().unlock();
+                readLock.unlock();
             }
         }
     }

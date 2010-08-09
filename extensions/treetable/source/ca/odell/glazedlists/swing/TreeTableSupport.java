@@ -6,6 +6,7 @@ package ca.odell.glazedlists.swing;
 import ca.odell.glazedlists.TreeList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.awt.Component;
 import java.awt.Point;
@@ -591,13 +592,14 @@ public final class TreeTableSupport {
                 hitNode = hit == renderedPanel.getNodeComponent();
             }
             if (SwingUtilities.isLeftMouseButton(me) && renderedPanel != null && renderedPanel.isPointOverExpanderButton(clickPoint)) {
-                treeList.getReadWriteLock().writeLock().lock();
+                final Lock writeLock = treeList.getReadWriteLock().writeLock();
+                writeLock.lock();
                 try {
                     // expand/collapse the row if possible
                     if (treeList.getAllowsChildren(row))
                         TreeTableUtilities.toggleExpansion(table, treeList, row).run();
                 } finally {
-                    treeList.getReadWriteLock().writeLock().unlock();
+                    writeLock.unlock();
                 }
 
                 // return early and don't allow the delegate a chance to react to the mouse click
@@ -655,7 +657,8 @@ public final class TreeTableSupport {
             if (column != -1 && table.convertColumnIndexToModel(column) != hierarchyColumnModelIndex)
                 return;
 
-            treeList.getReadWriteLock().writeLock().lock();
+            final Lock writeLock = treeList.getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 // if the row is expandable, toggle its expanded state
                 if (treeList.getAllowsChildren(row)) {
@@ -664,7 +667,7 @@ public final class TreeTableSupport {
                         restoreStateRunnable = r;
                 }
             } finally {
-                treeList.getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
 
@@ -714,7 +717,8 @@ public final class TreeTableSupport {
             if (row == -1)
                 return;
 
-            treeList.getReadWriteLock().writeLock().lock();
+            final Lock writeLock = treeList.getReadWriteLock().writeLock();
+            writeLock.lock();
             try {
                 // if the row is expandable, toggle its expanded state
                 if (treeList.getAllowsChildren(row)) {
@@ -723,7 +727,7 @@ public final class TreeTableSupport {
                         TreeTableUtilities.toggleExpansion(table, treeList, row).run();
                 }
             } finally {
-                treeList.getReadWriteLock().writeLock().unlock();
+                writeLock.unlock();
             }
         }
     }

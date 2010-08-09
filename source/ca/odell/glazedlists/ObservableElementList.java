@@ -6,6 +6,7 @@ package ca.odell.glazedlists;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.impl.adt.Barcode;
 import ca.odell.glazedlists.impl.adt.BarcodeIterator;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.util.ArrayList;
 import java.util.EventListener;
@@ -414,7 +415,8 @@ public class ObservableElementList<E> extends TransformedList<E, E> {
         if (this.observedElements == null)
             throw new IllegalStateException("This list has been disposed and can no longer be used.");
 
-        getReadWriteLock().writeLock().lock();
+        final Lock writeLock = getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             this.updates.beginEvent();
 
@@ -426,7 +428,7 @@ public class ObservableElementList<E> extends TransformedList<E, E> {
 
             this.updates.commitEvent();
         } finally {
-            getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 

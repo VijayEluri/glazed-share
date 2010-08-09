@@ -6,6 +6,7 @@ package ca.odell.glazedlists.swing;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.awt.EventQueue;
 import java.util.ArrayList;
@@ -101,11 +102,12 @@ public class DefaultEventListModel<E> implements ListEventListener<E>, ListModel
      * @return the value at <code>index</code>
      */
     public Object getElementAt(int index) {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.get(index);
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -113,11 +115,12 @@ public class DefaultEventListModel<E> implements ListEventListener<E>, ListModel
      * Gets the size of the list.
      */
     public int getSize() {
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return source.size();
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 

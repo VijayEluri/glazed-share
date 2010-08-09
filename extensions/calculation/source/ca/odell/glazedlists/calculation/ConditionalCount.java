@@ -6,6 +6,7 @@ package ca.odell.glazedlists.calculation;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.FilterList;
 import ca.odell.glazedlists.matchers.Matcher;
+import ca.odell.glazedlists.util.concurrent.Lock;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 
@@ -31,14 +32,15 @@ final class ConditionalCount<E> extends AbstractCalculation<Integer> implements 
         // the user should ideally know nothing about this FilterList, so we
         // lock the pipeline during its construction so the calling code need
         // not consider concurrency, which is really an implementation detail
-        source.getReadWriteLock().readLock().lock();
+        final Lock readLock = source.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             filtered = new FilterList<E>(source, matcher);
             filtered.addListEventListener(this);
 
             setValue(new Integer(filtered.size()));
         } finally {
-            source.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 

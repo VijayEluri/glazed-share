@@ -5,6 +5,7 @@ package ca.odell.glazedlists.impl.swing;
 
 // the core Glazed Lists packages
 import ca.odell.glazedlists.ThresholdList;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import javax.swing.*;
 
@@ -33,11 +34,12 @@ public class LowerThresholdRangeModel extends DefaultBoundedRangeModel implement
      */
     @Override
     public int getMaximum() {
-        target.getReadWriteLock().readLock().lock();
+        final Lock readLock = target.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return target.getUpperThreshold();
         } finally {
-            target.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -46,11 +48,12 @@ public class LowerThresholdRangeModel extends DefaultBoundedRangeModel implement
      */
     @Override
     public int getValue() {
-        target.getReadWriteLock().readLock().lock();
+        final Lock readLock = target.getReadWriteLock().readLock();
+        readLock.lock();
         try {
             return target.getLowerThreshold();
         } finally {
-            target.getReadWriteLock().readLock().unlock();
+            readLock.unlock();
         }
     }
 
@@ -63,7 +66,8 @@ public class LowerThresholdRangeModel extends DefaultBoundedRangeModel implement
      */
     @Override
     public void setRangeProperties(int newValue, int newExtent, int newMin, int newMax, boolean adjusting) {
-        target.getReadWriteLock().writeLock().lock();
+        final Lock writeLock = target.getReadWriteLock().writeLock();
+        writeLock.lock();
         try {
             // Correct invalid values
             if(newMin > newMax) newMin = newMax;
@@ -92,7 +96,7 @@ public class LowerThresholdRangeModel extends DefaultBoundedRangeModel implement
             if(changed) super.setRangeProperties(newValue, newExtent, newMin, newMax, adjusting);
 
         } finally {
-            target.getReadWriteLock().writeLock().unlock();
+            writeLock.unlock();
         }
     }
 }

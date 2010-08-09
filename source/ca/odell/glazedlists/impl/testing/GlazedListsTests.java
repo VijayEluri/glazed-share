@@ -8,6 +8,7 @@ import ca.odell.glazedlists.FunctionList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.matchers.Matcher;
+import ca.odell.glazedlists.util.concurrent.Lock;
 
 import java.io.*;
 import java.util.*;
@@ -242,11 +243,12 @@ public class GlazedListsTests {
 
             while (System.currentTimeMillis() < endTime) {
                 // acquire the write lock and add a new element
-                this.list.getReadWriteLock().writeLock().lock();
+                final Lock writeLock = this.list.getReadWriteLock().writeLock();
+                writeLock.lock();
                 try {
                     this.list.add(this.value);
                 } finally {
-                    this.list.getReadWriteLock().writeLock().unlock();
+                    writeLock.unlock();
                 }
 
                 // pause before adding another element
