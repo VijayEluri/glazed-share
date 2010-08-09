@@ -103,6 +103,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     private Format<E> format;
     
     private boolean mAvoidRemoteInUpdate;
+    private boolean mDebug;
 
     /**
      * Create a new TreeList that adds hierarchy to the specified source list.
@@ -477,6 +478,21 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     /** {@inheritDoc} */
     @Override
     public void listChanged(ListEvent<Node<E>> listChanges) {
+        String old = mDebug ? data.toString() : null;
+        try {
+            internalListChanged(listChanges);
+        } catch (RuntimeException e) {
+            // Add extra debug info to track *why* it fails
+            throw new RuntimeException(
+                    "old=[" + old + "]"
+                    + "\ncurrent=[" + data + "]"
+                    + "\nsource=[" + source + "]"
+                    + "\nchanges=[" + listChanges + "]", 
+                    e);
+        }
+    }
+    
+    private void internalListChanged(ListEvent<Node<E>> listChanges) {
         updates.beginEvent(true);
 
         // first pass: apply changes to the trees structure, marking all new
@@ -1849,6 +1865,17 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
     public void setAvoidRemoteInUpdate(boolean pAvoidRemoteInUpdate) {
         mAvoidRemoteInUpdate = pAvoidRemoteInUpdate;
+    }
+    
+    /**
+     * Is extra debugging info turned on?
+     */
+    public boolean isDebug() {
+        return mDebug;
+    }
+
+    public void setDebug(boolean pDebug) {
+        mDebug = pDebug;
     }
 
     private static class FakeElement implements Element {
