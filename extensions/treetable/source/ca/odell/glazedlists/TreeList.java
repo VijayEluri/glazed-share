@@ -75,6 +75,9 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     protected static final byte ALL_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "V", "r", "v"));
     protected static final byte VISIBLE_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "V"));
     private static final byte HIDDEN_NODES = BYTE_CODER.colorsToByte(Arrays.asList("r", "v"));
+    /**
+     * Real nodes exist in "source"
+     */
     protected static final byte REAL_NODES = BYTE_CODER.colorsToByte(Arrays.asList("R", "r"));
 
     /** compare nodes by value */
@@ -519,21 +522,22 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 } else {
                     // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
                     Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
+                    boolean visible = oldNode.isVisible();
                     int oldIndex = -1;
-                    if (oldNode.element != null) {
-                        oldIndex = data.indexOfNode(oldNode.element, ALL_NODES);
-                    } else {
+                    if (oldNode.element == null) {
                         // NOTE KI this should *NOT* occur
-                        oldIndex = -1;
+                        throw new RuntimeException("TreeList corrupted");
                     }
+                    oldIndex = data.indexOfNode(oldNode.element, ALL_NODES);
     
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, nodesToVerify, oldIndex);
                     if (updated != null) {
                         nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
                     } else {
-                        // Only update visible index
-                        int visibleIndex = data.indexOfNode(oldNode.element, VISIBLE_NODES);
-                        updates.addUpdate(visibleIndex);
+                        if(visible) {
+                            int viewIndex = data.indexOfNode(oldNode.element, VISIBLE_NODES);
+                            updates.addUpdate(viewIndex);
+                        }
                     }
                 }                
             } else if(type == ListEvent.DELETE) {
