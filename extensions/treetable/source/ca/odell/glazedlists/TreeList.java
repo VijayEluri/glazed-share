@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Logger;
 
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.impl.GlazedListsImpl;
@@ -32,6 +33,7 @@ import ca.odell.glazedlists.impl.adt.barcode2.ListToByteCoder;
  * @author <a href="mailto:jesse@swank.ca">Jesse Wilson</a>
  */
 public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
+    static final Logger LOG = Logger.getLogger("glazed.treelist");
 
     /** An {@link ExpansionModel} with a simple policy: all nodes start expanded. */
     public static final ExpansionModel NODES_START_EXPANDED = new DefaultExpansionModel(true);
@@ -105,9 +107,10 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      */
     private Format<E> format;
     
-    private boolean mAvoidRemoteInUpdate;
+    private boolean mAvoidRemoveInUpdate;
     private boolean mDebug;
-
+    private SelectionTracker mSelectionTracker;
+    
     /**
      * Create a new TreeList that adds hierarchy to the specified source list.
      * This constructor does not sort the elements.
@@ -505,16 +508,31 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         NodeAttacher nodeAttacher = new NodeAttacher(true);
         FinderInserter finderInserter = new FinderInserter();
 
+        final boolean oldLogic = !isAvoidRemoveInUpdate()
+            || (mSelectionTracker != null && !mSelectionTracker.hasSelection());
+
+        if (false) {
+            LOG.info("START: "
+                + "changes=[" + listChanges + "]"
+                + "\ndata=[" + data + "]"
+                + "\nsource=[" + source + "]");
+        }
+
         while(listChanges.next()) {
             int sourceIndex = listChanges.getIndex();
             int type = listChanges.getType();
+
+            if (false) {
+                LOG.info("sourceIndex=" + sourceIndex
+                    + "\ntype=" + type
+                    + "\ndata=[" + data + "]");
+            }
 
             if(type == ListEvent.INSERT) {
                 Node<E> inserted = finderInserter.findOrInsertNode(sourceIndex, null, -1);
                 nodeAttacher.nodesToAttach.queueNewNodeForInserting(inserted);
 
             } else if(type == ListEvent.UPDATE) {
-                boolean oldLogic = !isAvoidRemoteInUpdate();
                 if (oldLogic) {
                     deleteAndDetachNode(sourceIndex, nodesToVerify);
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, null, -1);
@@ -522,6 +540,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 } else {
                     // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
                     Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
+
                     boolean visible = oldNode.isVisible();
                     int oldIndex = -1;
                     if (oldNode.element == null) {
@@ -559,6 +578,13 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         assert(isValid());
 
         updates.commitEvent();
+
+        if (false) {
+            LOG.info("END: "
+                + "changes=[" + listChanges + "]"
+                + "\ndata=[" + data + "]"
+                + "\nsource=[" + source + "]");
+        }
     }
 
     /**
@@ -1863,12 +1889,12 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * @return true if remove is avoided in update to avoid loosing selection.
      * By default false
      */
-    public boolean isAvoidRemoteInUpdate() {
-        return mAvoidRemoteInUpdate;
+    public boolean isAvoidRemoveInUpdate() {
+        return mAvoidRemoveInUpdate;
     }
 
-    public void setAvoidRemoteInUpdate(boolean pAvoidRemoteInUpdate) {
-        mAvoidRemoteInUpdate = pAvoidRemoteInUpdate;
+    public void setAvoidRemoveInUpdate(boolean pAvoidRemoveInUpdate) {
+        mAvoidRemoveInUpdate = pAvoidRemoveInUpdate;
     }
     
     /**
@@ -1880,6 +1906,14 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
     public void setDebug(boolean pDebug) {
         mDebug = pDebug;
+    }
+
+    public SelectionTracker getSelectionTracker() {
+        return mSelectionTracker;
+    }
+
+    public void setSelectionTracker(SelectionTracker pSelectionTracker) {
+        mSelectionTracker = pSelectionTracker;
     }
 
     private static class FakeElement implements Element {
