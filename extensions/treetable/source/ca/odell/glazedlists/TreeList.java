@@ -508,8 +508,8 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         NodeAttacher nodeAttacher = new NodeAttacher(true);
         FinderInserter finderInserter = new FinderInserter();
 
-        final boolean oldLogic = !isAvoidRemoveInUpdate()
-            || (mSelectionTracker != null && !mSelectionTracker.hasSelection());
+        final boolean allowOptimize = isAvoidRemoveInUpdate();
+        Object marker = null;
 
         if (false) {
             LOG.info("START: "
@@ -533,13 +533,20 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 nodeAttacher.nodesToAttach.queueNewNodeForInserting(inserted);
 
             } else if(type == ListEvent.UPDATE) {
-                if (oldLogic) {
+                Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
+
+                if (mSelectionTracker != null && marker == null) {
+                    E elem = oldNode.getElement();
+                    marker = mSelectionTracker.markSelection(elem);
+                }
+                
+                if (!allowOptimize || marker == null) {
                     deleteAndDetachNode(sourceIndex, nodesToVerify);
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, null, -1);
                     nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
                 } else {
                     // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
-                    Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
+//                    Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
 
                     boolean visible = oldNode.isVisible();
                     int oldIndex = -1;
@@ -558,6 +565,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                             updates.addUpdate(viewIndex);
                         }
                     }
+
                 }                
             } else if(type == ListEvent.DELETE) {
                 deleteAndDetachNode(sourceIndex, nodesToVerify);
@@ -579,6 +587,10 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
         updates.commitEvent();
 
+        if (marker != null) {
+            mSelectionTracker.restoreSelection(marker);
+        }
+        
         if (false) {
             LOG.info("END: "
                 + "changes=[" + listChanges + "]"
@@ -955,6 +967,8 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             Node<E> inserted = source.get(sourceIndex);
             inserted.resetDerivedState();
             List<E> insertedPath = inserted.path();
+            inserted.expanded = expansionModel.isExpanded(inserted.getElement(), insertedPath);
+            
             final int dataSize = data.size(ALL_NODES);
 
             //  bound the range of indices where this node can be inserted. This is
@@ -1128,6 +1142,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     protected void replaceNode(Node<E> before, Node<E> after, boolean virtual) {
         assert(before.pathLength() == after.pathLength());
         after.expanded = before.expanded;
+        after.expanded = expansionModel.isExpanded(before.getElement(), before.path);
         // change parent and children
         after.parent = before.parent;
         for(Node<E> child = before.firstChild(); child != null; child = child.siblingAfter) {

@@ -4,10 +4,10 @@
 package ca.odell.glazedlists;
 
 // the Glazed Lists' change objects
+import java.util.Collection;
+
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
-
-import java.util.Collection;
 
 /**
  * A convenience class for {@link EventList}s that decorate another {@link EventList}.
@@ -33,6 +33,8 @@ public abstract class TransformedList<S, E> extends AbstractEventList<E> impleme
 
     /** the event list to transform */
     protected EventList<S> source;
+    
+    protected boolean mDisposed;
 
     /**
      * Creates a {@link TransformedList} to transform the specified {@link EventList}.
@@ -153,6 +155,13 @@ public abstract class TransformedList<S, E> extends AbstractEventList<E> impleme
     }
 
     /**
+     * @return true if this list is disposed
+     */
+    public boolean isDisposed() {
+        return mDisposed;
+    }
+    
+    /**
      * Releases the resources consumed by this {@link TransformedList} so that it
      * may eventually be garbage collected.
      *
@@ -167,6 +176,7 @@ public abstract class TransformedList<S, E> extends AbstractEventList<E> impleme
      * to call any method on a {@link TransformedList} after it has been disposed.
      */
     public void dispose() {
+        mDisposed = true;
         source.removeListEventListener(this);
     }
 }

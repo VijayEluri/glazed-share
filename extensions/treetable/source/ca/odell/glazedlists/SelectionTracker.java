@@ -8,6 +8,13 @@ package ca.odell.glazedlists;
 public interface SelectionTracker {
     /**
      * Does tracker have currently selection in TreeList or not
+     * 
+     * @return non-null marker if pElem is currently selected
      */
-    boolean hasSelection();
+    Object markSelection(Object pElem);
+    
+    /**
+     * Restore selection tracked by markSelection 
+     */
+    void restoreSelection(Object pMarker);
 }
