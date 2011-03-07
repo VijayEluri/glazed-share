@@ -800,7 +800,6 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                     return;
                 }
                 this.limit = limit;
-                if (fireEvents) {
                     // notify the world of this separator change
                 if (fireEvents) {
                     updates.beginEvent();
