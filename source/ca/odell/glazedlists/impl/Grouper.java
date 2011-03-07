@@ -3,12 +3,12 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.impl;
 
-import java.util.Comparator;
-import java.util.LinkedList;
-
 import ca.odell.glazedlists.SortedList;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.impl.adt.Barcode;
+
+import java.util.Comparator;
+import java.util.LinkedList;
 
 /**
  * This helper class manages the groups created by dividing up a
@@ -158,8 +158,6 @@ public class Grouper<E> {
                 // if it really is
                 if (barcode.get(changeIndex) == UNIQUE) {
                     if (changeIndex+1 < barcode.size() && barcode.get(changeIndex+1) == DUPLICATE) {
-//                        barcode.set(changeIndex, UNIQUE, 2);
-//                        toDoList.set(changeIndex, TODO, 1);
                         // however, we need to make sure that the barcode UNIQUE entry we are looking at
                         // was part of the barcode state before we started this iteration of listChanges.
                         // Specifically, we are concerned about the case where an update on the first element

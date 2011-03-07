@@ -3,14 +3,7 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.swing;
 
-import ca.odell.glazedlists.BasicEventList;
-import ca.odell.glazedlists.CompositeList;
-import ca.odell.glazedlists.EventList;
-import ca.odell.glazedlists.FilterList;
-import ca.odell.glazedlists.FunctionList;
-import ca.odell.glazedlists.GlazedLists;
-import ca.odell.glazedlists.TextFilterator;
-import ca.odell.glazedlists.UniqueList;
+import ca.odell.glazedlists.*;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.impl.GlazedListsImpl;
@@ -22,24 +15,19 @@ import ca.odell.glazedlists.matchers.Matchers;
 import ca.odell.glazedlists.matchers.TextMatcherEditor;
 import ca.odell.glazedlists.util.concurrent.Lock;
 
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.ActionMap;
-import javax.swing.ComboBoxEditor;
-import javax.swing.ComboBoxModel;
-import javax.swing.DefaultCellEditor;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
-import javax.swing.JList;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JTextField;
-import javax.swing.KeyStroke;
-import javax.swing.ListCellRenderer;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.event.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.lang.reflect.Method;
+import java.text.Format;
+import java.text.ParsePosition;
+import java.util.Comparator;
+import java.util.List;
+
+import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
@@ -48,33 +36,7 @@ import javax.swing.event.PopupMenuListener;
 import javax.swing.plaf.UIResource;
 import javax.swing.plaf.basic.BasicComboBoxEditor;
 import javax.swing.plaf.basic.ComboPopup;
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.AttributeSet;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
-import javax.swing.text.DocumentFilter;
-
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.EventQueue;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.lang.reflect.Method;
-import java.text.Format;
-import java.text.ParsePosition;
-import java.util.Comparator;
-import java.util.List;
+import javax.swing.text.*;
 
 /**
  * This class {@link #install}s support for filtering and autocompletion into
@@ -211,6 +173,9 @@ public final class AutoCompleteSupport<E> {
 
     private static final ParsePosition PARSE_POSITION = new ParsePosition(0);
     private static final Class[] VALUE_OF_SIGNATURE = {String.class};
+
+    /** Marker object for indicating "not found". */
+    private static final Object NOT_FOUND = new Object();
 
     //
     // These member variables control behaviour of the autocompletion support
@@ -464,7 +429,7 @@ public final class AutoCompleteSupport<E> {
         this.format = format;
 
         // only build a custom renderer if the user specified their own Format but has not installed a custom renderer of their own
-        final boolean defaultRendererInstalled = comboBox.getEditor() instanceof UIResource;
+        final boolean defaultRendererInstalled = comboBox.getRenderer() instanceof UIResource;
         this.renderer = format != null && defaultRendererInstalled ? new StringFunctionRenderer() : null;
 
         // is this combo box a TableCellEditor?
@@ -858,6 +823,9 @@ public final class AutoCompleteSupport<E> {
      * <code>comboBoxElement</code>.
      */
     private String convertToString(Object comboBoxElement) {
+        if (comboBoxElement == NOT_FOUND)
+            return "NOT_FOUND";
+
         if (format != null)
             return format.format(comboBoxElement);
 
@@ -951,7 +919,7 @@ public final class AutoCompleteSupport<E> {
             boolean textMatches = GlazedListsImpl.equal(currentItemText, currentText);
 
             // select the first element if no autocompletion term could be found
-            if (currentItem == null && !allItemsUnfiltered.isEmpty()) {
+            if (currentItem == NOT_FOUND && !allItemsUnfiltered.isEmpty()) {
                 currentItem = allItemsUnfiltered.get(0);
                 currentItemText = convertToString(currentItem);
                 itemMatches = currentItem == comboBox.getSelectedItem();
@@ -968,7 +936,7 @@ public final class AutoCompleteSupport<E> {
                     comboBoxEditorComponent.setText(currentItemText);
 
                 // adjust the model's selected item, if necessary
-                if (!itemMatches)
+                if (!itemMatches || comboBox.getSelectedIndex() == -1)
                     comboBox.setSelectedItem(currentItem);
             } finally {
                 doNotPostProcessDocumentChanges = false;
@@ -1325,7 +1293,7 @@ public final class AutoCompleteSupport<E> {
 
         final Matcher<String> valueMatcher = new TextMatcher<String>(new SearchTerm[] {new SearchTerm(value)}, GlazedLists.toStringTextFilterator(), TextMatcherEditor.STARTS_WITH, getTextMatchingStrategy());
 
-        Object partialMatchItem = null;
+        Object partialMatchItem = NOT_FOUND;
 
         // search the list of ALL UNFILTERED items for an autocompletion term for the given value
         for (int i = 0, n = allItemsUnfiltered.size(); i < n; i++) {
@@ -1338,7 +1306,7 @@ public final class AutoCompleteSupport<E> {
 
             // if we have not yet located a partial match, check the current itemString for a partial match
             // (to be returned if an exact match cannot be found)
-            if (partialMatchItem == null) {
+            if (partialMatchItem == NOT_FOUND) {
                 if (prefixIsEmpty ? "".equals(itemString) : valueMatcher.matches(itemString))
                     partialMatchItem = item;
             }
@@ -1480,7 +1448,7 @@ public final class AutoCompleteSupport<E> {
             final String valueAfterEdit = comboBoxEditorComponent.getText();
 
             // if an autocomplete term could not be found and we're in strict mode, rollback the edit
-            if (isStrict() && findAutoCompleteTerm(valueAfterEdit) == null && !allItemsUnfiltered.isEmpty()) {
+            if (isStrict() && (findAutoCompleteTerm(valueAfterEdit) == NOT_FOUND) && !allItemsUnfiltered.isEmpty()) {
                 // indicate the error to the user
                 if (getBeepOnStrictViolation())
                     UIManager.getLookAndFeel().provideErrorFeedback(comboBoxEditorComponent);
@@ -1782,18 +1750,21 @@ public final class AutoCompleteSupport<E> {
 
         private class CheckStrictModeInvariantRunnable implements Runnable {
             public void run() {
-                final String currentText = comboBoxEditorComponent.getText();
-                final Object item = findAutoCompleteTerm(currentText);
-                String itemText = convertToString(item);
+                final JTextField editor = comboBoxEditorComponent;
+                if (editor != null) {
+                    final String currentText = editor.getText();
+                    final Object item = findAutoCompleteTerm(currentText);
+                    String itemText = convertToString(item);
 
-                // if we did not find the same autocomplete term
-                if (!currentText.equals(itemText)) {
-                    // select the first item if we could not find an autocomplete term with the currentText
-                    if (item == null && !allItemsUnfiltered.isEmpty())
-                        itemText = convertToString(allItemsUnfiltered.get(0));
+                    // if we did not find the same autocomplete term
+                    if (!currentText.equals(itemText)) {
+                        // select the first item if we could not find an autocomplete term with the currentText
+                        if (item == NOT_FOUND && !allItemsUnfiltered.isEmpty())
+                            itemText = convertToString(allItemsUnfiltered.get(0));
 
-                    // set the new strict value text into the editor component
-                    comboBoxEditorComponent.setText(itemText);
+                        // set the new strict value text into the editor component
+                        editor.setText(itemText);
+                    }
                 }
             }
         }
@@ -2190,7 +2161,7 @@ public final class AutoCompleteSupport<E> {
      * capabilities to the JComboBox.
      */
     public static class AutoCompleteCellEditor<E> extends DefaultCellEditor {
-		private final AutoCompleteSupport<E> autoCompleteSupport;
+        private final AutoCompleteSupport<E> autoCompleteSupport;
 
         /**
          * Construct a TableCellEditor using the JComboBox supplied by the
@@ -2198,17 +2169,17 @@ public final class AutoCompleteSupport<E> {
          * is retrieved using {@link AutoCompleteSupport#getComboBox()}.
          */
         public AutoCompleteCellEditor(AutoCompleteSupport<E> autoCompleteSupport) {
-			super(autoCompleteSupport.getComboBox());
-			this.autoCompleteSupport = autoCompleteSupport;
-		}
+            super(autoCompleteSupport.getComboBox());
+            this.autoCompleteSupport = autoCompleteSupport;
+        }
 
         /**
          * Returns the AutoCompleteSupport object that controls the
          * autocompletion behaviour for the JComboBox.
          */
         public AutoCompleteSupport<E> getAutoCompleteSupport() {
-			return autoCompleteSupport;
-		}
+            return autoCompleteSupport;
+        }
     }
 
     /**

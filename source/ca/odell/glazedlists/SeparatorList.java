@@ -384,6 +384,15 @@ public class SeparatorList<E> extends TransformedList<E, E> {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public void dispose() {
+        // dispose internal SeparatorInjectorList and SortedList
+        separatorSource.dispose();
+        separatorSource.source.dispose();
+        super.dispose();
+    }
+
     /**
      * A separator heading the elements of a group.
      */
@@ -518,7 +527,7 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                 insertedSeparators.add(groupIndex + sourceIndex, SEPARATOR, 1);
                 Element<GroupSeparator> node = separators.add(groupIndex, new GroupSeparator(), 1);
                 node.get().setNode(node);
-                node.get().setLimit(defaultLimit,false);
+                node.get().applyLimit(defaultLimit, false);
             }
             // update the cached values in all separators
             for(int i = 0; i < separators.size(); i++) {
@@ -705,7 +714,7 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                 // If this fix poses a problem, we might want to change the way
                 // Grouper works to fire a special flag called 'shift' with the
                 // value true whenever the group joined is a RIGHT_GROUP
-                int shiftGroupIndex = groupIndex + 1;
+                final int shiftGroupIndex = groupIndex + 1;
                 if(groupChangeType == ListEvent.DELETE && elementChangeType != ListEvent.INSERT
                         && shiftGroupIndex < insertedSeparators.colourSize(SEPARATOR)
                         && shiftGroupIndex < grouper.getBarcode().colourSize(Grouper.UNIQUE)) {
@@ -719,6 +728,35 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                         updates.addInsert(collapsedGroupStartIndex + shiftGroupIndex);
                         //String now = insertedSeparators.toString();
                         //System.out.println("Changed from " + was + " to " + now);
+                    }
+                }
+                // handle separator shifts for source list changes like AACCC -> AAACC or AAACC
+                // -> AACCC:
+                // an element at the beginning or end of an existing group is changed such that
+                // it now should belong to the neighbour group, but the element doesn't change
+                // its position in the SortedList
+                // the grouper barcode adjusts correctly, but here we have to adjust the
+                // separator positions accordingly
+                if (groupChangeType == ListEvent.UPDATE && elementChangeType == ListEvent.UPDATE
+                        && shiftGroupIndex < insertedSeparators.colourSize(SEPARATOR)
+                        && shiftGroupIndex < grouper.getBarcode().colourSize(Grouper.UNIQUE)) {
+                    // when we have an element update and a group update we check and synchronize
+                    // the separator position of the next group with the help of the grouper barcode unique index
+                    int collapsedGroupStartIndex = grouper.getBarcode().getIndex(shiftGroupIndex, Grouper.UNIQUE);
+                    int separatorsIndex = insertedSeparators.getIndex(shiftGroupIndex , SEPARATOR);
+                    int calculatedSeparatorPos = collapsedGroupStartIndex + shiftGroupIndex;
+//                    String was = insertedSeparators.toString();
+                    if (calculatedSeparatorPos != separatorsIndex) {
+                        // the separator position does not match the grouper barcode -> adjust it
+                        insertedSeparators.remove(separatorsIndex, 1);
+                        updates.addDelete(separatorsIndex);
+                        insertedSeparators.add(calculatedSeparatorPos, SEPARATOR, 1);
+                        // for the update event we have to account for the previous delete
+                        final int insertPos = (calculatedSeparatorPos < separatorsIndex) ? calculatedSeparatorPos
+                                : calculatedSeparatorPos - 1;
+                        updates.addInsert(insertPos);
+//                        String now = insertedSeparators.toString();
+//                        System.out.println("Changed from " + was + " to " + now);
                     }
                 }
             }
@@ -742,18 +780,28 @@ public class SeparatorList<E> extends TransformedList<E, E> {
             public int getLimit() {
                 return limit;
             }
+
             /** {@inheritDoc} */
             protected void setLimit(int limit, boolean fireEvents) {
+                applyLimit(limit, true);
+            }
+
+            /**
+             * Applies the maximum number of elements in this group to show.
+             *
+             * @param limit the limit
+             * @param fireEvents flag to indicate if ListEvents should be fired or not
+             */
+            protected void applyLimit(int limit, boolean fireEvents) {
                 if(this.limit == limit) return;
                 // fail gracefully if the node is null, that means this separator
                 // has been removed from the list but its still visible to an editor
                 if(node == null) {
                     return;
                 }
-
                 this.limit = limit;
-
-                // notify the world of this separator change
+                if (fireEvents) {
+                    // notify the world of this separator change
                 if (fireEvents) {
                     updates.beginEvent();
                     int groupIndex = separators.indexOfNode(node, (byte)1);
@@ -762,7 +810,7 @@ public class SeparatorList<E> extends TransformedList<E, E> {
                     updates.commitEvent();
                 }
             }
-            
+
             /** {@inheritDoc} */
             public void setLimit(int limit) {
                 setLimit(limit,true);

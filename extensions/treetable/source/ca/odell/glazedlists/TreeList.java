@@ -11,7 +11,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
-
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.impl.GlazedListsImpl;
 import ca.odell.glazedlists.impl.adt.CircularArrayList;
@@ -19,6 +18,8 @@ import ca.odell.glazedlists.impl.adt.KeyedCollection;
 import ca.odell.glazedlists.impl.adt.barcode2.Element;
 import ca.odell.glazedlists.impl.adt.barcode2.FourColorTree;
 import ca.odell.glazedlists.impl.adt.barcode2.ListToByteCoder;
+
+import java.util.*;
 
 /**
  * A hierarchial EventList that infers its structure from a flat list.
@@ -1088,7 +1089,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
                 // compare by value first
                 for(int d = 0; d < aPathLength && d < bPathLength; d++) {
-                    Comparator comparator = format.getComparator(d);
+                    Comparator<? super E> comparator = format.getComparator(d);
                     if (comparator == null) return 0;
                     int result = comparator.compare(a.get(d), b.get(d));
                     if(result != 0) return result;
@@ -1334,7 +1335,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      *     then depth 3 corresponds to the element <code>yarmo.mp4</code>.
      */
     private boolean valuesEqual(int depth, E a, E b) {
-        Comparator comparator = format.getComparator(depth);
+        Comparator<? super E> comparator = format.getComparator(depth);
         if (comparator != null) {
             return comparator.compare(a, b) == 0;
         } else {
@@ -1462,7 +1463,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * depth. If enforcing order at this level is not intended, this method
          * should return <code>null</code>.
          */
-        public Comparator<? extends E> getComparator(int depth);
+        public Comparator<? super E> getComparator(int depth);
     }
 
     /**
@@ -1493,7 +1494,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
             // compare by value first
             for(int d = 0; d < aEffectiveLength && d < bEffectiveLength; d++) {
-                Comparator comparator = format.getComparator(d);
+                Comparator<? super E> comparator = format.getComparator(d);
                 if (comparator == null) return 0;
                 int result = comparator.compare(a.path.get(d), b.path.get(d));
                 if(result != 0) return result;

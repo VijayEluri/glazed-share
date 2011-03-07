@@ -27,6 +27,8 @@ import java.util.List;
  * @author James Lemieux
  */
 public class OpenIssuesByMonthCategoryDataset extends EventListCategoryDataset<String, Date> {
+    /** serialVersionUID. */
+    private static final long serialVersionUID = 0L;
 
     /** The sequencer which produces the uniform column keys. */
     private final SequenceList.Sequencer<Date> monthSequencer = Sequencers.monthSequencer();
@@ -42,12 +44,12 @@ public class OpenIssuesByMonthCategoryDataset extends EventListCategoryDataset<S
      * @param issues the source list of {@link Issue} objects
      */
     public OpenIssuesByMonthCategoryDataset(EventList<Issue> issues) {
-        this(new CollectionList<Issue,ValueSegment<Date,String>>(issues, new StateChangesCollectionModel()));
+        this(issues, new CollectionList<Issue,ValueSegment<Date,String>>(issues, new StateChangesCollectionModel()));
     }
 
-    private OpenIssuesByMonthCategoryDataset(CollectionList<Issue,ValueSegment<Date,String>> valueSegments) {
+    private OpenIssuesByMonthCategoryDataset(EventList<Issue> issues, CollectionList<Issue,ValueSegment<Date,String>> valueSegments) {
         // filter away ValueSegments whose value represents a retired issue (RESOLVED or CLOSED)
-        this(new FilterList<ValueSegment<Date,String>>(valueSegments, new OpenIssuesMatcher()));
+        this(new FilterList<ValueSegment<Date,String>>(valueSegments, new OpenIssuesMatcher(new StatusProvider(issues))));
     }
 
     private OpenIssuesByMonthCategoryDataset(FilterList<ValueSegment<Date,String>> filteredValueSegments) {
@@ -169,14 +171,18 @@ public class OpenIssuesByMonthCategoryDataset extends EventListCategoryDataset<S
     }
 
     /**
-     * This Matcher filters away RESOLVED and CLOSED ValueSegment objects
-     * since they do not represent an Issue in an open state:
-     * (NEW, STARTED, REOPENED, VERIFIED, UNCONFIRMED)
+     * This Matcher filters away RESOLVED, VERIFIED and CLOSED ValueSegment objects
+     * since they do not represent an Issue in an open state.
      */
     private static class OpenIssuesMatcher implements Matcher<ValueSegment<Date,String>> {
+        private StatusProvider statusProvider;
+
+        public OpenIssuesMatcher(StatusProvider statusProvider) {
+            this.statusProvider = statusProvider;
+        }
         public boolean matches(ValueSegment<Date, String> item) {
             final String value = item.getValue();
-            return value != "RESOLVED" && value != "CLOSED";
+            return statusProvider.statusFor(value).isActive();
         }
     }
 }
