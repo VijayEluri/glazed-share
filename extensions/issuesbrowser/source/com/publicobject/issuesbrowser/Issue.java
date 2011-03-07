@@ -31,7 +31,7 @@ public class Issue implements Comparable {
     private Project owner;
 
     // mandatory issue fields
-    private Integer id;
+    private String id;
     private String statusCode;
     private String status;
     private Priority priority;
@@ -126,7 +126,8 @@ public class Issue implements Comparable {
         // this stores the sequence of state changes in chronological order, like a timeline
         final List<ValueSegment<Date,String>> timeline = new ArrayList<ValueSegment<Date,String>>();
 
-        String state = "NEW";
+        final IssueTrackingSystem issueTracker = issue.getProject().getOwner();
+        String state = issueTracker.getSupportedStati()[0].getName();
 
         // the end Date of the previous ValueSegment
         Date last = issue.getCreationTimestamp();
@@ -173,15 +174,15 @@ public class Issue implements Comparable {
     /**
      * ID of this issue (unique key).
      */
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
     /**
      * Get the web address of this issue for use with a browser like IE or Firefox.
      */
     public URL getURL() {
         try {
-            return new URL(owner.getBaseUri() + "/issues/show_bug.cgi?id=" + getId());
+            return new URL(getProject().getIssueDetailUri(this));
         } catch(MalformedURLException e) {
             throw new RuntimeException(e);
         }
@@ -360,6 +361,13 @@ public class Issue implements Comparable {
      */
     public PeerIssue getDuplicate() { return isDuplicate; }
     public void setDuplicate(PeerIssue isDuplicate) { this.isDuplicate = isDuplicate; }
+
+    /**
+     * @return the owning project
+     */
+    public Project getProject() {
+        return owner;
+    }
 
     /**
      * Write this issue for debugging.

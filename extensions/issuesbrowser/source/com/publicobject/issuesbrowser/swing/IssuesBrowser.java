@@ -8,6 +8,10 @@ import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.swing.*;
 
+import com.publicobject.issuesbrowser.*;
+import com.publicobject.misc.Exceptions;
+import com.publicobject.misc.swing.*;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.net.URL;
@@ -21,10 +25,6 @@ import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
-
-import com.publicobject.issuesbrowser.*;
-import com.publicobject.misc.Exceptions;
-import com.publicobject.misc.swing.*;
 
 /**
  * An IssueBrowser is a program for finding and viewing issues.
@@ -105,8 +105,8 @@ public class IssuesBrowser implements Runnable {
         issueLoader.start();
 
         // load issues from a file if requested
-        if(startupArgs.length == 1) {
-            issueLoader.setFileName(startupArgs[0]);
+        if(startupArgs.length == 2) {
+            issueLoader.fileBasedProject(startupArgs[0], startupArgs[1]);
         }
     }
 
@@ -157,12 +157,12 @@ public class IssuesBrowser implements Runnable {
         issuesSelectionModel.setSelectionMode(ListSelection.MULTIPLE_INTERVAL_SELECTION_DEFENSIVE); // multi-selection best demos our awesome selection management
         issuesSelectionModel.addListSelectionListener(new IssuesSelectionListener());
         issuesJTable.setSelectionModel(issuesSelectionModel);
-        issuesJTable.getColumnModel().getColumn(0).setPreferredWidth(150);
-        issuesJTable.getColumnModel().getColumn(1).setPreferredWidth(400);
+        issuesJTable.getColumnModel().getColumn(0).setPreferredWidth(350);
+        issuesJTable.getColumnModel().getColumn(1).setPreferredWidth(300);
         issuesJTable.getColumnModel().getColumn(2).setPreferredWidth(300);
         issuesJTable.getColumnModel().getColumn(3).setPreferredWidth(300);
-        issuesJTable.getColumnModel().getColumn(4).setPreferredWidth(250);
-        issuesJTable.getColumnModel().getColumn(5).setPreferredWidth(300);
+        issuesJTable.getColumnModel().getColumn(4).setPreferredWidth(100);
+        issuesJTable.getColumnModel().getColumn(5).setPreferredWidth(250);
         issuesJTable.getColumnModel().getColumn(6).setPreferredWidth(300);
         issuesJTable.getColumnModel().getColumn(7).setPreferredWidth(1000);
         // turn off cell focus painting
@@ -186,7 +186,7 @@ public class IssuesBrowser implements Runnable {
         projectsCombo.setEditable(false);
         projectsCombo.setOpaque(false);
         projectsCombo.addItemListener(new ProjectChangeListener());
-        projectsComboModel.setSelectedItem(new Project(null, "Select a Java.net project..."));
+        projectsComboModel.setSelectedItem(new Project(null, "Select a Java.net project...", null));
 
         // build a label to display the number of issues in the issue table
         issueCounter = new IssueCounterLabel(filteredIssues);

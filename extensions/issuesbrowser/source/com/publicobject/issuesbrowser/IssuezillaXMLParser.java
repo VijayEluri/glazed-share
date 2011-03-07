@@ -3,9 +3,9 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package com.publicobject.issuesbrowser;
 
-import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.matchers.Matchers;
+
 import com.publicobject.misc.xml.*;
 
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class IssuezillaXMLParser {
         final XMLTagPath issueTag = new XMLTagPath("issuezilla").child("issue");
         issueParser.addProcessor(issueTag.start(),                           Processors.createNewObject(Issue.class, new Class[] {Project.class}, new Object[] {project}));
         issueParser.addProcessor(issueTag.attribute("status_code"),          Processors.setterMethod(Issue.class, "statusCode", Converters.trimAndIntern()));
-        issueParser.addProcessor(issueTag.child("issue_id"),                 Processors.setterMethod(Issue.class, "id", Converters.integer()));
+        issueParser.addProcessor(issueTag.child("issue_id"),                 Processors.setterMethod(Issue.class, "id", Converters.trimAndIntern()));
         issueParser.addProcessor(issueTag.child("issue_status"),             Processors.setterMethod(Issue.class, "status", Converters.trimAndIntern()));
         issueParser.addProcessor(issueTag.child("priority"),                 Processors.setterMethod(Issue.class, "priority", new PriorityConverter()));
         issueParser.addProcessor(issueTag.child("resolution"),               Processors.setterMethod(Issue.class, "resolution", Converters.trimAndIntern()));
@@ -141,21 +141,11 @@ public class IssuezillaXMLParser {
     }
 
     /**
-     * When executed, this opens a file specified on the command line, parses
-     * it for Issuezilla XML and writes the issues to the command line.
-     */
-    public static void main(String[] args) throws IOException {
-        final EventList<Issue> issuesList = new BasicEventList<Issue>();
-
-        loadIssues(issuesList, "https://glazedlists.dev.java.net/issues/xml.cgi", Project.getProjects().get(0));
-    }
-
-    /**
      * Loads issues from the specified URL.
      */
-    public static void loadIssues(EventList<Issue> target, String baseUrl, Project owner) throws IOException {
+    public static void loadIssues(EventList<Issue> target, Project owner) throws IOException {
         int issuesPerRequest = 100;
-
+        String baseQueryUrl = owner.getIssueQueryUri();
         // continuously load issues until there's no more
         while (true) {
             // figure out how many to load
@@ -170,7 +160,8 @@ public class IssuezillaXMLParser {
             }
 
             // prepare a stream
-            URL issuesUrl = new URL(baseUrl + "?include_attachments=false&id=" + idArg);
+            final String urlAsString = baseQueryUrl + "?include_attachments=false&id=" + idArg;
+            URL issuesUrl = new URL(urlAsString);
             InputStream issuesInStream = issuesUrl.openStream();
 
             // parse
@@ -196,7 +187,7 @@ public class IssuezillaXMLParser {
      */
     private static class PriorityConverter implements Converter<String,Priority> {
         public Priority convert(String value) {
-            return Priority.lookup(value.trim());
+            return Priority.lookupIssuzilla(value.trim());
         }
     }
 

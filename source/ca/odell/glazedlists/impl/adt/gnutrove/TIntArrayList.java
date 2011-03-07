@@ -34,7 +34,7 @@ import java.util.Random;
  * Created: Sat Dec 29 14:21:12 2001
  *
  * @author Eric D. Friedman
- * @version $Id: TIntArrayList.java,v 1.4 2009/03/15 13:29:42 brands Exp $
+ * @version $Id: TIntArrayList.java,v 1.4 2009-03-15 13:29:42 brands Exp $
  */
 public class TIntArrayList implements Cloneable {
 

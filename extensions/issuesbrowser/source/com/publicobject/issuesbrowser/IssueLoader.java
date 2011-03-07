@@ -5,6 +5,7 @@ package com.publicobject.issuesbrowser;
 
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.GlazedLists;
+
 import com.publicobject.misc.Exceptions;
 import com.publicobject.misc.Throbber;
 
@@ -44,9 +45,9 @@ public class IssueLoader implements Runnable {
         }
     }
 
-    public void setFileName(String fileName) {
+    public void fileBasedProject(String fileName, String issueTrackerName) {
         synchronized(this) {
-            this.project = new Project(null, fileName);
+            this.project = new Project(null, fileName, IssueTrackingSystem.findByName(issueTrackerName));
             this.project.setFileName(fileName);
             issueLoaderThread.interrupt();
             notify();
@@ -84,9 +85,10 @@ public class IssueLoader implements Runnable {
                 // load the issues
                 issuesList.clear();
                 if(currentProject.getFileName() != null) {
-                    IssuezillaXMLParser.loadIssues(issuesList, new FileInputStream(currentProject.getFileName()), currentProject);
+                    currentProject.getOwner().loadIssues(issuesList,
+                            new FileInputStream(currentProject.getFileName()), currentProject);
                 } else {
-                    IssuezillaXMLParser.loadIssues(issuesList, currentProject.getXMLUri(), currentProject);
+                    currentProject.getOwner().loadIssues(issuesList, currentProject);
                 }
 
             // handling interruptions is really gross

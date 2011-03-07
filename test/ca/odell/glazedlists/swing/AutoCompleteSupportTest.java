@@ -13,13 +13,22 @@ import ca.odell.glazedlists.matchers.TextMatcherEditor;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.FieldPosition;
+import java.text.Format;
+import java.text.ParsePosition;
 
 import javax.swing.*;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.UndoableEditListener;
 import javax.swing.plaf.ComboBoxUI;
 import javax.swing.plaf.basic.ComboPopup;
-import javax.swing.text.*;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.Element;
+import javax.swing.text.Position;
+import javax.swing.text.Segment;
 
 public class AutoCompleteSupportTest extends SwingTestCase {
 
@@ -32,6 +41,7 @@ public class AutoCompleteSupportTest extends SwingTestCase {
         final ComboBoxUI originalUI = combo.getUI();
         final ComboBoxModel originalModel = combo.getModel();
         final boolean originalEditable = combo.isEditable();
+        final ListCellRenderer originalRenderer = combo.getRenderer();
         final ComboBoxEditor originalEditor = combo.getEditor();
         final int originalEditorKeyListenerCount = originalEditor.getEditorComponent().getKeyListeners().length;
         final AbstractDocument originalEditorDocument = (AbstractDocument) ((JTextField) combo.getEditor().getEditorComponent()).getDocument();
@@ -50,9 +60,10 @@ public class AutoCompleteSupportTest extends SwingTestCase {
 
         JTextField currentEditor = ((JTextField) combo.getEditor().getEditorComponent());
         AbstractDocument currentEditorDocument = (AbstractDocument) currentEditor.getDocument();
-
+        ListCellRenderer currentRenderer = combo.getRenderer();
         assertSame(originalUI, combo.getUI());
         assertSame(currentEditorDocument, originalEditorDocument);
+        assertSame(originalRenderer, currentRenderer);
         assertNotSame(originalEditor, combo.getEditor());
         assertNotSame(originalModel, combo.getModel());
         assertEquals(!originalEditable, combo.isEditable());
@@ -86,11 +97,12 @@ public class AutoCompleteSupportTest extends SwingTestCase {
 
         currentEditor = ((JTextField) combo.getEditor().getEditorComponent());
         currentEditorDocument = (AbstractDocument) currentEditor.getDocument();
-
+        currentRenderer = combo.getRenderer();
         assertSame(originalUI, combo.getUI());
         assertSame(originalModel, combo.getModel());
         assertEquals(originalEditable, combo.isEditable());
         assertSame(originalEditor, combo.getEditor());
+        assertSame(originalRenderer, currentRenderer);
         assertSame(originalEditorDocument, currentEditorDocument);
         assertSame(currentEditorDocument.getDocumentFilter(), null);
         assertEquals(originalComboBoxPropertyChangeListenerCount, combo.getPropertyChangeListeners().length);
@@ -139,6 +151,34 @@ public class AutoCompleteSupportTest extends SwingTestCase {
         } catch (IllegalArgumentException e) {
             // expected
         }
+    }
+
+    /**
+     * Tests that a custom renderer gets not overwritten, when a format is specified.
+     */
+    public void guiTestRenderer() {
+        final JComboBox combo = new JComboBox();
+        final ListCellRenderer renderer = new NoopListCellRenderer();
+        combo.setRenderer(renderer);
+        final EventList<Object> items = new BasicEventList<Object>();
+        items.add("First");
+        items.add("Second");
+        final AutoCompleteSupport support = AutoCompleteSupport.install(combo, items, null, new Format() {
+            @Override
+            public StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition pos) {
+                toAppendTo.append("item");
+                toAppendTo.append(obj);
+                return toAppendTo;
+            }
+
+            @Override
+            public Object parseObject(String source, ParsePosition pos) {
+                return source.substring(4);
+            }
+        });
+        assertSame(renderer, combo.getRenderer());
+        support.uninstall();
+        assertSame(renderer, combo.getRenderer());
     }
 
     public void guiTestChangeModel() {
@@ -365,6 +405,41 @@ public class AutoCompleteSupportTest extends SwingTestCase {
         assertEquals(3, listener.getCount());
     }
 
+    public void guiTestStrictModeWithNull() throws BadLocationException {
+        final JComboBox combo = new JComboBox();
+        final EventList<String> items = new BasicEventList<String>();
+        items.add("New Brunswick");
+        items.add(null);
+        items.add("Nova Scotia");
+        items.add("Newfoundland");
+        items.add("Prince Edward Island");
+
+        AutoCompleteSupport support = AutoCompleteSupport.install(combo, items);
+        final JTextField textField = (JTextField) combo.getEditor().getEditorComponent();
+        final AbstractDocument doc = (AbstractDocument) textField.getDocument();
+        support.setStrict(true);
+
+        assertEquals("", textField.getText());
+        assertEquals(-1, combo.getSelectedIndex()); // should be 1, but JComboBox.getSelecteditem() always returns -1 for null element
+        assertNull(combo.getSelectedItem());
+
+        combo.setSelectedItem("New Brunswick");
+        assertEquals("New Brunswick", textField.getText());
+        assertEquals(0, combo.getSelectedIndex());
+
+        // typing garbage in strict mode should be ignored
+        doc.replace(0, doc.getLength(), "garbage", null);
+        assertEquals(5, combo.getItemCount());
+        assertEquals("New Brunswick", textField.getText());
+        assertEquals(0, combo.getSelectedIndex());
+
+        // select second item (=null)
+        combo.setSelectedItem(null);
+        assertNull(combo.getSelectedItem());
+        assertEquals("", textField.getText());
+        assertEquals(-1, combo.getSelectedIndex()); // should be 1, but JComboBox.getSelecteditem() always returns -1 for null element
+    }
+
     public void guiTestStrictModeAndFirstItem() throws BadLocationException {
         final JComboBox combo = new JComboBox();
 
@@ -385,10 +460,12 @@ public class AutoCompleteSupportTest extends SwingTestCase {
         support.setFirstItem("Saskatchewan");
         combo.setSelectedItem(null);
         assertNull(combo.getSelectedItem());
+        assertEquals("", textField.getText());
 
         support.setStrict(true);
         assertEquals("Saskatchewan", combo.getSelectedItem());
         assertEquals(0, combo.getSelectedIndex());
+        assertEquals("Saskatchewan", textField.getText());
 
         support.setStrict(false);
         support.setFirstItem(null);
@@ -401,6 +478,7 @@ public class AutoCompleteSupportTest extends SwingTestCase {
         support.setStrict(true);
         assertNull(combo.getSelectedItem());
         assertEquals(-1, combo.getSelectedIndex());
+        assertEquals("", textField.getText());
     }
 
     public void guiTestDeleteKey() throws BadLocationException {
@@ -868,7 +946,8 @@ public class AutoCompleteSupportTest extends SwingTestCase {
 
         final JTextField textField = (JTextField) combo.getEditor().getEditorComponent();
 
-        final EventList<String> items = new BasicEventList<String>();
+        final EventList<String> basicItems = new BasicEventList<String>();
+        final EventList<String> items = GlazedLists.threadSafeList(basicItems);
         items.add("foobar");
 
         SwingUtilities.invokeAndWait(new Runnable() {
@@ -948,6 +1027,14 @@ public class AutoCompleteSupportTest extends SwingTestCase {
         public void selectAll() { }
         public void addActionListener(ActionListener l) { }
         public void removeActionListener(ActionListener l) { }
+    }
+
+    private static class NoopListCellRenderer extends DefaultListCellRenderer {
+        @Override
+        public Component getListCellRendererComponent(JList list, Object value, int index,
+                boolean isSelected, boolean cellHasFocus) {
+            return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+        }
     }
 
     private static class CountingActionListener implements ActionListener {
