@@ -508,16 +508,43 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         NodeAttacher nodeAttacher = new NodeAttacher(true);
         FinderInserter finderInserter = new FinderInserter();
 
-        final boolean allowOptimize = isAvoidRemoveInUpdate();
-        Object marker = null;
+        // thread local cached value for data
+        final FourColorTree<Node<E>> localData = data;
 
         if (false) {
             LOG.info("START: "
                 + "changes=[" + listChanges + "]"
-                + "\ndata=[" + data + "]"
+                + "\ndata=[" + localData + "]"
                 + "\nsource=[" + source + "]");
         }
 
+        // Marker for UPDATED
+        final boolean allowOptimize = isAvoidRemoveInUpdate();
+        final SelectionTracker tracker = mSelectionTracker;
+        Object marker = null;
+
+        if (tracker != null && tracker.hasSelection()) {
+            List<Object> updated = new ArrayList<Object>();
+            while (listChanges.next()) {
+                int type = listChanges.getType();
+                if (type == ListEvent.UPDATE) {
+                    int sourceIndex = listChanges.getIndex();
+                    Node<E> oldNode = localData.get(sourceIndex, REAL_NODES).get();
+                    E elem = oldNode.getElement();
+                    updated.add(elem);
+                }
+            }
+            marker = tracker.markSelection(updated);
+            if (false) {
+                if (marker != null) {
+                    LOG.info("marked=" + marker + "\nupdated=" + updated);
+                } else {
+                    LOG.info("not-marked:" + updated);
+                }
+            }
+        }
+        
+        listChanges.reset();
         while(listChanges.next()) {
             int sourceIndex = listChanges.getIndex();
             int type = listChanges.getType();
@@ -525,7 +552,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             if (false) {
                 LOG.info("sourceIndex=" + sourceIndex
                     + "\ntype=" + type
-                    + "\ndata=[" + data + "]");
+                    + "\ndata=[" + localData + "]");
             }
 
             if(type == ListEvent.INSERT) {
@@ -533,13 +560,8 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 nodeAttacher.nodesToAttach.queueNewNodeForInserting(inserted);
 
             } else if(type == ListEvent.UPDATE) {
-                Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
+                Node<E> oldNode = localData.get(sourceIndex, REAL_NODES).get();
 
-                if (mSelectionTracker != null && marker == null) {
-                    E elem = oldNode.getElement();
-                    marker = mSelectionTracker.markSelection(elem);
-                }
-                
                 if (!allowOptimize || marker == null) {
                     deleteAndDetachNode(sourceIndex, nodesToVerify);
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, null, -1);
@@ -554,14 +576,14 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                         // NOTE KI this should *NOT* occur
                         throw new RuntimeException("TreeList corrupted");
                     }
-                    oldIndex = data.indexOfNode(oldNode.element, ALL_NODES);
+                    oldIndex = localData.indexOfNode(oldNode.element, ALL_NODES);
     
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, nodesToVerify, oldIndex);
                     if (updated != null) {
                         nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
                     } else {
                         if(visible) {
-                            int viewIndex = data.indexOfNode(oldNode.element, VISIBLE_NODES);
+                            int viewIndex = localData.indexOfNode(oldNode.element, VISIBLE_NODES);
                             updates.addUpdate(viewIndex);
                         }
                     }
@@ -588,13 +610,13 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         updates.commitEvent();
 
         if (marker != null) {
-            mSelectionTracker.restoreSelection(marker);
+            tracker.restoreSelection(marker);
         }
         
         if (false) {
             LOG.info("END: "
                 + "changes=[" + listChanges + "]"
-                + "\ndata=[" + data + "]"
+                + "\ndata=[" + localData + "]"
                 + "\nsource=[" + source + "]");
         }
     }
