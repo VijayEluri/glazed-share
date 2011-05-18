@@ -416,7 +416,7 @@ public class EventSelectionModelTest extends SwingTestCase {
         public boolean allowsChildren(String element) {
             return element.equals("zero");
         }
-        public Comparator<? super String> getComparator(int depth) {
+        public Comparator<? extends String> getComparator(int depth) {
             return null;
         }
         public void getPath(List<String> path, String element) {
