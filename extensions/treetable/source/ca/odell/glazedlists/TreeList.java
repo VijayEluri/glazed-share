@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
+
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.impl.GlazedListsImpl;
 import ca.odell.glazedlists.impl.adt.CircularArrayList;
@@ -18,8 +19,6 @@ import ca.odell.glazedlists.impl.adt.KeyedCollection;
 import ca.odell.glazedlists.impl.adt.barcode2.Element;
 import ca.odell.glazedlists.impl.adt.barcode2.FourColorTree;
 import ca.odell.glazedlists.impl.adt.barcode2.ListToByteCoder;
-
-import java.util.*;
 
 /**
  * A hierarchial EventList that infers its structure from a flat list.
@@ -525,22 +524,36 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         Object marker = null;
 
         if (tracker != null && tracker.hasSelection()) {
-            List<Object> updated = new ArrayList<Object>();
+            List<Object> updated = null;
             while (listChanges.next()) {
                 int type = listChanges.getType();
                 if (type == ListEvent.UPDATE) {
                     int sourceIndex = listChanges.getIndex();
-                    Node<E> oldNode = localData.get(sourceIndex, REAL_NODES).get();
-                    E elem = oldNode.getElement();
-                    updated.add(elem);
+                    int realSize = localData.size(REAL_NODES);
+                    if (sourceIndex < realSize) {
+                        Node<E> oldNode = localData.get(sourceIndex, REAL_NODES).get();
+                        E elem = oldNode.getElement();
+                        if (updated == null) {
+                            updated = new ArrayList<Object>();
+                        }
+                        updated.add(elem);
+                    } else {
+                        // TODO KI this shouldn't occur?!? (but it seemingly occurs sometimes)
+                        // update like this triggers issue " U++++++U", i.e. INSERT + UPDATE
+                        LOG.info("invalid index=" + sourceIndex 
+                                + ", realSize=" + realSize 
+                                + ", update=" + listChanges);
+                    }
                 }
             }
-            marker = tracker.markSelection(updated);
-            if (false) {
-                if (marker != null) {
-                    LOG.info("marked=" + marker + "\nupdated=" + updated);
-                } else {
-                    LOG.info("not-marked:" + updated);
+            if (updated != null) {
+                marker = tracker.markSelection(updated);
+                if (false) {
+                    if (marker != null) {
+                        LOG.info("marked=" + marker + "\nupdated=" + updated);
+                    } else {
+                        LOG.info("not-marked:" + updated);
+                    }
                 }
             }
         }
@@ -562,7 +575,16 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
             } else if(type == ListEvent.UPDATE) {
                 Node<E> oldNode = localData.get(sourceIndex, REAL_NODES).get();
-
+                
+                if (false) {
+                    Node<E> parent = oldNode.parent;
+                    LOG.info(
+                        "node.visible=" + oldNode.isVisible()
+                        + "\nnode.expanded=" + oldNode.expanded
+                        + "\nparent.visible=" + (parent != null ? ""+parent.isVisible() : "null")
+                        + "\nparent.expanded=" + (parent != null ? ""+parent.expanded : "null"));
+                }
+                
                 if (!allowOptimize || marker == null) {
                     deleteAndDetachNode(sourceIndex, nodesToVerify);
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, null, -1);
@@ -571,18 +593,21 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                     // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
 //                    Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
 
-                    boolean visible = oldNode.isVisible();
-                    int oldIndex = -1;
-                    if (oldNode.element == null) {
-                        // NOTE KI this should *NOT* occur
-                        throw new RuntimeException("TreeList corrupted");
-                    }
-                    oldIndex = localData.indexOfNode(oldNode.element, ALL_NODES);
+                    final boolean visible = oldNode.isVisible();
+                    final int oldIndex = localData.indexOfNode(oldNode.element, ALL_NODES);
     
                     Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, nodesToVerify, oldIndex);
                     if (updated != null) {
+                        // update expansion state of node
+                        boolean expanded = expansionModel.isExpanded(updated.getElement(), updated.path);
+                        setExpanded(oldNode, expanded);
+                        
                         nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
                     } else {
+                        // update expansion state of node
+                        boolean expanded = expansionModel.isExpanded(oldNode.getElement(), oldNode.path);
+                        setExpanded(oldNode, expanded);
+                        
                         if(visible) {
                             int viewIndex = localData.indexOfNode(oldNode.element, VISIBLE_NODES);
                             updates.addUpdate(viewIndex);
@@ -669,8 +694,10 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             }
 
             // fix up the expanded states
-            for(Iterator<Node<E>> i = nodesToExpand.iterator(); i.hasNext(); ) {
-                setExpanded(i.next(), true);
+            for (Node<E> node : nodesToExpand) {
+                // TODO KI check expansionModel or not?!?
+                boolean expanded = expansionModel.isExpanded(node.getElement(), node.path);
+                setExpanded(node, expanded);
             }
             nodesToExpand.clear();
         }
@@ -1111,7 +1138,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
                 // compare by value first
                 for(int d = 0; d < aPathLength && d < bPathLength; d++) {
-                    Comparator<? super E> comparator = format.getComparator(d);
+                    Comparator comparator = format.getComparator(d);
                     if (comparator == null) return 0;
                     int result = comparator.compare(a.get(d), b.get(d));
                     if(result != 0) return result;
@@ -1357,7 +1384,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      *     then depth 3 corresponds to the element <code>yarmo.mp4</code>.
      */
     private boolean valuesEqual(int depth, E a, E b) {
-        Comparator<? super E> comparator = format.getComparator(depth);
+        Comparator comparator = format.getComparator(depth);
         if (comparator != null) {
             return comparator.compare(a, b) == 0;
         } else {
@@ -1485,7 +1512,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * depth. If enforcing order at this level is not intended, this method
          * should return <code>null</code>.
          */
-        public Comparator<? super E> getComparator(int depth);
+        public Comparator<? extends E> getComparator(int depth);
     }
 
     /**
@@ -1516,7 +1543,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
             // compare by value first
             for(int d = 0; d < aEffectiveLength && d < bEffectiveLength; d++) {
-                Comparator<? super E> comparator = format.getComparator(d);
+                Comparator comparator = format.getComparator(d);
                 if (comparator == null) return 0;
                 int result = comparator.compare(a.path.get(d), b.path.get(d));
                 if(result != 0) return result;
