@@ -448,7 +448,9 @@ public class TableComparatorChooser<E> extends AbstractTableComparatorChooser<E>
         // remove our listeners from the table's header and model
         table.getModel().removeTableModelListener(tableModelHandler);
         table.removePropertyChangeListener("model", tableModelHandler);
-        header.removePropertyChangeListener("UI", tableHeaderUIHandler);
+        if (header != null) {
+            header.removePropertyChangeListener("UI", tableHeaderUIHandler);
+        }
 
         // null out our table reference for safety's sake
         table = null;
