@@ -1,12 +1,17 @@
 package ca.odell.glazedlists;
 
-import ca.odell.glazedlists.impl.testing.GlazedListsTests;
-import ca.odell.glazedlists.impl.testing.ListConsistencyListener;
-
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 
 import junit.framework.TestCase;
+import ca.odell.glazedlists.TreeList.Path;
+import ca.odell.glazedlists.impl.testing.GlazedListsTests;
+import ca.odell.glazedlists.impl.testing.ListConsistencyListener;
 
 /**
  * Verifies that TreeList behaves as expected.
@@ -535,10 +540,15 @@ public class TreeListTest extends TestCase {
         List<String> nodeListAsStrings = new ArrayList<String>();
         for(Iterator<TreeList.Node<String>> i = nodeList.iterator(); i.hasNext(); ) {
             TreeList.Node<String> node = i.next();
-            StringBuffer asString = new StringBuffer(node.path().size());
-            for(Iterator<String> n = node.path().iterator(); n.hasNext(); ) {
-                asString.append(n.next());
+            
+            Path<String> nodePath = node.path();
+            StringBuffer asString = new StringBuffer(nodePath.size());
+            
+            for (int n = 0; n < nodePath.size(); n++) {
+                String next = nodePath.get(n);
+                asString.append(next);
             }
+            
             nodeListAsStrings.add(asString.toString());
         }
 
@@ -1561,7 +1571,7 @@ public class TreeListTest extends TestCase {
         source.add("ABC");
         source.add("ABD");
 
-        expansionProvider.setExpanded("B", GlazedListsTests.stringToList("AB"), false);
+        expansionProvider.setExpanded("B", GlazedListsTests.stringToPath("AB"), false);
         source.add(1, "AB");
         assertTreeStructure(treeList, new String[] {
                 "A",
@@ -1811,8 +1821,8 @@ public class TreeListTest extends TestCase {
     public void testComparatorOrdering_FixMe() {
         TreeList.NodeComparator<String> nodeComparator = new TreeList.NodeComparator<String>(new CharacterTreeFormat(String.CASE_INSENSITIVE_ORDER));
 
-        TreeList.Node<String> abc = new TreeList.Node<String>(false, GlazedListsTests.stringToList("ABC"));
-        TreeList.Node<String> abcd = new TreeList.Node<String>(false, GlazedListsTests.stringToList("ABCd"));
+        TreeList.Node<String> abc = new TreeList.Node<String>(false, GlazedListsTests.stringToPath("ABC"));
+        TreeList.Node<String> abcd = new TreeList.Node<String>(false, GlazedListsTests.stringToPath("ABCd"));
 
         assertTrue(nodeComparator.compare(abc, abcd) < 0);
     }

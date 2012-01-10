@@ -4,8 +4,9 @@
 package ca.odell.glazedlists;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+
+import ca.odell.glazedlists.TreeList.Path;
 
 /**
  * An {@link TreeList.ExpansionModel} that uses a {@link Map} to remember
@@ -31,7 +32,7 @@ public class DefaultExternalExpansionModel<E> implements TreeList.ExpansionModel
         this(TreeList.<E>nodesStartExpanded());
     }
 
-    public boolean isExpanded(E element, List<E> path) {
+    public boolean isExpanded(E element, Path<E> path) {
         Boolean expanded = elementsExpandedStates.get(element);
         if(expanded == null) {
             expanded = Boolean.valueOf(defaultsModel.isExpanded(element, path));
@@ -40,7 +41,7 @@ public class DefaultExternalExpansionModel<E> implements TreeList.ExpansionModel
         return expanded.booleanValue();
     }
 
-    public void setExpanded(E element, List<E> path, boolean expanded) {
+    public void setExpanded(E element, Path<E> path, boolean expanded) {
         elementsExpandedStates.put(element, Boolean.valueOf(expanded));
     }
 }

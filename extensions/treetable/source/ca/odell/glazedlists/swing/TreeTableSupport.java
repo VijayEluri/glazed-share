@@ -616,11 +616,12 @@ public final class TreeTableSupport {
             // translate the clickPoint to be relative to the rendered component
             final Rectangle cellRect = table.getCellRect(row, column, true);
             clickPoint.translate(-cellRect.x, -cellRect.y);
-
+            clickPoint.y = cellRect.height / 2;
+            
             // if a left-click occurred over the expand/collapse button
             final TreeTableCellPanel renderedPanel = TreeTableUtilities.prepareRenderer(me);
             boolean hitNode = true;
-            if (renderedPanel != null) {
+            if (renderedPanel != null && table.getColumnCount() == 1) {
                 Component hit = renderedPanel.findComponentAt(clickPoint);
                 hitNode = hit == renderedPanel.getNodeComponent();
             }

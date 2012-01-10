@@ -33,6 +33,11 @@ import ca.odell.glazedlists.impl.adt.barcode2.ListToByteCoder;
  * @author <a href="mailto:jesse@swank.ca">Jesse Wilson</a>
  */
 public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
+    /**
+     * For performance sensitive DEBUG
+     */
+    static final boolean DEBUG = false;
+
     static final Logger LOG = Logger.getLogger("glazed.treelist");
 
     /** An {@link ExpansionModel} with a simple policy: all nodes start expanded. */
@@ -109,7 +114,6 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     
     private boolean mAvoidRemoveInUpdate;
     private boolean mDebug;
-    private SelectionTracker mSelectionTracker;
     
     /**
      * Create a new TreeList that adds hierarchy to the specified source list.
@@ -144,6 +148,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     }
 
     /** @deprecated use the constructor that takes an {@link ExpansionModel} */
+    @Deprecated
     public TreeList(EventList<E> source, Format<E> format) {
         this(new InitializationData<E>(source, format, TreeList.<E>nodesStartExpanded()));
     }
@@ -505,13 +510,14 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         // nodes as hidden. In the next pass we'll figure out parents, siblings
         // and fire events for nodes that shouldn't be hidden
         List<Node<E>> nodesToVerify = new ArrayList<Node<E>>();
+        List<Node<E>> nodesToExpand = new ArrayList<Node<E>>();
         NodeAttacher nodeAttacher = new NodeAttacher(true);
         FinderInserter finderInserter = new FinderInserter();
 
         // thread local cached value for data
         final FourColorTree<Node<E>> localData = data;
 
-        if (false) {
+        if (DEBUG) {
             LOG.info("START: "
                 + "changes=[" + listChanges + "]"
                 + "\ndata=[" + localData + "]"
@@ -520,104 +526,68 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
         // Marker for UPDATED
         final boolean allowOptimize = isAvoidRemoveInUpdate();
-        final SelectionTracker tracker = mSelectionTracker;
-        Object marker = null;
 
-        if (tracker != null && tracker.hasSelection()) {
-            List<Object> updated = null;
-            while (listChanges.next()) {
-                int type = listChanges.getType();
-                if (type == ListEvent.UPDATE) {
-                    int sourceIndex = listChanges.getIndex();
-                    int realSize = localData.size(REAL_NODES);
-                    if (sourceIndex < realSize) {
-                        Node<E> oldNode = localData.get(sourceIndex, REAL_NODES).get();
-                        E elem = oldNode.getElement();
-                        if (updated == null) {
-                            updated = new ArrayList<Object>();
-                        }
-                        updated.add(elem);
-                    } else {
-                        // TODO KI this shouldn't occur?!? (but it seemingly occurs sometimes)
-                        // update like this triggers issue " U++++++U", i.e. INSERT + UPDATE
-                        LOG.info("invalid index=" + sourceIndex 
-                                + ", realSize=" + realSize 
-                                + ", update=" + listChanges);
-                    }
-                }
-            }
-            if (updated != null) {
-                marker = tracker.markSelection(updated);
-                if (false) {
-                    if (marker != null) {
-                        LOG.info("marked=" + marker + "\nupdated=" + updated);
-                    } else {
-                        LOG.info("not-marked:" + updated);
-                    }
-                }
-            }
-        }
-        
-        listChanges.reset();
         while(listChanges.next()) {
             int sourceIndex = listChanges.getIndex();
             int type = listChanges.getType();
 
-            if (false) {
+            if (DEBUG) {
                 LOG.info("sourceIndex=" + sourceIndex
                     + "\ntype=" + type
                     + "\ndata=[" + localData + "]");
             }
 
             if(type == ListEvent.INSERT) {
-                Node<E> inserted = finderInserter.findOrInsertNode(sourceIndex, null, -1);
+                Node<E> inserted = finderInserter.insertNode(sourceIndex);
                 nodeAttacher.nodesToAttach.queueNewNodeForInserting(inserted);
 
             } else if(type == ListEvent.UPDATE) {
+                // NOTE KI only optimize "visible" nodes; hidden ones are not interesting
+                // (only visible nodes can be selected)
                 Node<E> oldNode = localData.get(sourceIndex, REAL_NODES).get();
                 
-                if (false) {
-                    Node<E> parent = oldNode.parent;
-                    LOG.info(
-                        "node.visible=" + oldNode.isVisible()
-                        + "\nnode.expanded=" + oldNode.expanded
-                        + "\nparent.visible=" + (parent != null ? ""+parent.isVisible() : "null")
-                        + "\nparent.expanded=" + (parent != null ? ""+parent.expanded : "null"));
+                boolean visible = oldNode.isVisible();
+                int oldIndex = -1;
+                boolean changedPos = true;
+                
+                if (visible && allowOptimize) {
+                    oldIndex = localData.indexOfNode(oldNode.element, ALL_NODES);
+                    changedPos = finderInserter.isPositionChanging(oldNode, sourceIndex, oldIndex);
                 }
                 
-                if (!allowOptimize || marker == null) {
+                if (DEBUG) {
+                    Node<E> parent = oldNode.parent;
+                    LOG.info(
+                            "changedPos=" + changedPos
+                            +"\n node.visible=" + visible
+                            + "\n node.expanded=" + oldNode.expanded
+                            + "\n parent.visible=" + (parent != null ? ""+parent.isVisible() : "null")
+                            + "\n parent.expanded=" + (parent != null ? ""+parent.expanded : "null"));
+                }
+                
+                if (changedPos || !visible || !allowOptimize) {
                     deleteAndDetachNode(sourceIndex, nodesToVerify);
-                    Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, null, -1);
+                    Node<E> updated = finderInserter.insertNode(sourceIndex);
                     nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
                 } else {
-                    // NOTE KI avoid DELETE + INSERT if sorting doesn't actually change
-//                    Node<E> oldNode = data.get(sourceIndex, REAL_NODES).get();
-
-                    final boolean visible = oldNode.isVisible();
-                    final int oldIndex = localData.indexOfNode(oldNode.element, ALL_NODES);
-    
-                    Node<E> updated = finderInserter.findOrInsertNode(sourceIndex, nodesToVerify, oldIndex);
-                    if (updated != null) {
-                        // update expansion state of node
-                        boolean expanded = expansionModel.isExpanded(updated.getElement(), updated.path);
-                        setExpanded(oldNode, expanded);
-                        
-                        nodeAttacher.nodesToAttach.queueNewNodeForInserting(updated);
-                    } else {
-                        // update expansion state of node
-                        boolean expanded = expansionModel.isExpanded(oldNode.getElement(), oldNode.path);
-                        setExpanded(oldNode, expanded);
-                        
-                        if(visible) {
-                            int viewIndex = localData.indexOfNode(oldNode.element, VISIBLE_NODES);
-                            updates.addUpdate(viewIndex);
-                        }
+                    // Position *NOT* changed => Only update visible
+                    int viewIndex = localData.indexOfNode(oldNode.element, VISIBLE_NODES);
+                    updates.elementUpdated(viewIndex, oldNode.getElement(), oldNode.getElement());
+                    
+                    // update expansion state of node
+                    boolean expanded = expansionModel.isExpanded(oldNode.getElement(), oldNode.path);
+                    if (oldNode.expanded != expanded) {
+                        nodesToExpand.add(oldNode);
                     }
-
                 }                
             } else if(type == ListEvent.DELETE) {
                 deleteAndDetachNode(sourceIndex, nodesToVerify);
             }
+        }
+
+        if (DEBUG) {
+            LOG.info("nodesToExpand=" + nodesToExpand.size()
+                + ", nodes=" + nodesToExpand);
         }
 
         // second pass: walk through all the changed nodes and attach parents
@@ -631,15 +601,17 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         // blow away obsolete parent nodes now that we can know for sure if they're obsolete
         deleteObsoleteVirtualParents(nodesToVerify);
 
+        // Expand/collapse nodes if needed       
+        for (Node<E> node : nodesToExpand) {
+            boolean expanded = expansionModel.isExpanded(node.getElement(), node.path);
+            setExpanded(node, expanded);
+        }        
+
         assert(isValid());
 
         updates.commitEvent();
 
-        if (marker != null) {
-            tracker.restoreSelection(marker);
-        }
-        
-        if (false) {
+        if (DEBUG) {
             LOG.info("END: "
                 + "changes=[" + listChanges + "]"
                 + "\ndata=[" + localData + "]"
@@ -873,6 +845,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             boolean visible = true;
             for(int i = pathToRoot.size() - 1; i >= 0; i--) {
                 current = pathToRoot.get(i);
+                current.expanded = expansionModel.isExpanded(current.getElement(), current.path);
 
                 // only fire events for visible nodes
                 if(visible) {
@@ -989,7 +962,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      */
     private class FinderInserter {
 
-        final KeyedCollection<Element<Node<E>>,List<E>> indicesByValue;
+        final KeyedCollection<Element<Node<E>>, Path<E>> indicesByValue;
 
         public FinderInserter() {
             this.indicesByValue = GlazedListsImpl.keyedCollection(
@@ -1009,14 +982,11 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * @return the new node, prior to any events fired, null if INSERT 
          * wasn't actually done
          */
-        protected Node<E> findOrInsertNode(
-                int sourceIndex, 
-                List<Node<E>> nodesToVerify,
-                int oldIndex) 
+        protected Node<E> insertNode(int sourceIndex) 
         {
             Node<E> inserted = source.get(sourceIndex);
             inserted.resetDerivedState();
-            List<E> insertedPath = inserted.path();
+            Path<E> insertedPath = inserted.path;
             inserted.expanded = expansionModel.isExpanded(inserted.getElement(), insertedPath);
             
             final int dataSize = data.size(ALL_NODES);
@@ -1049,13 +1019,9 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
             // find a virtual node that's an ancestor by value
             int insertIndex = firstPossibleIndex;
-            if (oldIndex != insertIndex) {
-                if (nodesToVerify != null) {
-                    deleteAndDetachNode(sourceIndex, nodesToVerify);
-                }
-                
+            {
                 for (int i = insertedPath.size() - 1; i >= 0; i--) {
-                    List<E> pathOfLengthI = insertedPath.subList(0, i);
+                    Path<E> pathOfLengthI = insertedPath.subPath(0, i);
                     Element<Node<E>> bestAncestor = indicesByValue.find(firstPossibleElement, lastPossibleElement, pathOfLengthI);
                     if (bestAncestor != null) {
                         if (!bestAncestor.get().virtual) {
@@ -1069,11 +1035,62 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 // insert the node as hidden by default - if we need to show this node,
                 // we'll change its state later and fire an 'insert' event then
                 addNode(inserted, HIDDEN_REAL, insertIndex);
-            } else {
-                // No actual change
-                inserted = null;
             }
             return inserted;
+        }
+
+        /**
+         * @param pNode Original node
+         * @param pSourceIndex the index of the element in the source list that has
+         *      been inserted
+         * @param pOldIndex Old index of pNode
+         * 
+         * @return true if position of node will change if update is done
+         */
+        protected boolean isPositionChanging(
+                Node<E> pNode,
+                int pSourceIndex, 
+                int pOldIndex) 
+        {
+            final Path<E> path = pNode.path;
+            
+            final int dataSize = data.size(ALL_NODES);
+
+            //  bound the range of indices where this node can be inserted. This is
+            // all the virtual nodes between our predecessor and follower in the
+            // source list
+            final int firstPossibleIndex = pSourceIndex > 0
+                    ? data.convertIndexColor(pSourceIndex - 1, REAL_NODES, ALL_NODES) + 1
+                    : 0;
+            final int lastPossibleIndex = pSourceIndex < data.size(REAL_NODES)
+                    ? data.convertIndexColor(pSourceIndex, REAL_NODES, ALL_NODES)
+                    : data.size(ALL_NODES);
+            final Element<Node<E>> firstPossibleElement = indexToElement(firstPossibleIndex, dataSize);
+            final Element<Node<E>> lastPossibleElement = indexToElement(lastPossibleIndex, dataSize);
+
+            // make sure we have all the values available that we need
+            populateIndicesByValue(firstPossibleIndex, lastPossibleIndex);
+
+            // find a virtual node with the exact same value
+            int insertIndex = -1;
+            Element<Node<E>> virtualSameElement = indicesByValue.find(firstPossibleElement, lastPossibleElement, path);
+            if (virtualSameElement == null) {
+                // find a virtual node that's an ancestor by value
+                insertIndex = firstPossibleIndex;
+                for (int i = path.size() - 1; i >= 0; i--) {
+                    Path<E> pathOfLengthI = path.subPath(0, i);
+                    Element<Node<E>> bestAncestor = indicesByValue.find(firstPossibleElement, lastPossibleElement, pathOfLengthI);
+                    if (bestAncestor != null) {
+                        if (!bestAncestor.get().virtual) {
+                            throw new IllegalStateException();
+                        }
+                        insertIndex = data.indexOfNode(bestAncestor, ALL_NODES) + 1;
+                        break;
+                    }
+                }
+            }
+            
+            return insertIndex != pOldIndex;
         }
 
         /**
@@ -1111,7 +1128,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             // we might be able to optimize this loop using element.next() ?
             for(int i = start; i < end; i++) {
                 Element<Node<E>> element = data.get(i, ALL_NODES);
-                indicesByValue.insert(element, element.get().path());
+                indicesByValue.insert(element, element.get().path);
             }
         }
 
@@ -1162,7 +1179,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
 
         // if it has children, replace it with a virtual copy and schedule that for verification
         if(!node.isLeaf()) {
-            Node<E> replacement = new Node<E>(node.virtual, new ArrayList<E>(node.path()));
+            Node<E> replacement = new Node<E>(node.virtual, node.path);
             replaceNode(node, replacement, true);
 
             nodesToVerify.add(replacement);
@@ -1195,6 +1212,13 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         after.expanded = expansionModel.isExpanded(before.getElement(), before.path);
         // change parent and children
         after.parent = before.parent;
+        
+        if (after.parent != null) {
+            after.parent.expanded = expansionModel.isExpanded(
+                after.parent.getElement(), 
+                after.parent.path);
+        }
+        
         for(Node<E> child = before.firstChild(); child != null; child = child.siblingAfter) {
             assert(child.parent == before);
             child.parent = after;
@@ -1342,13 +1366,13 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * @return the length of the common prefix path between the specified nodes
      */
     private int commonPathLength(Node<E> a, Node<E> b) {
-        List<E> aPath = a.path;
-        List<E> bPath = b.path;
-        int maxCommonPathLength = Math.min(aPath.size(), bPath.size());
+        final Path<E> pathA = a.path;
+        final Path<E> pathB = b.path;
+        final int maxCommonPathLength = Math.min(pathA.size(), pathB.size());
 
         // walk through the paths, looking for the first difference
         for(int i = 0; i < maxCommonPathLength; i++) {
-            if(!valuesEqual(i, aPath.get(i), bPath.get(i))) {
+            if(!valuesEqual(i, pathA.get(i), pathB.get(i))) {
                 return i;
             }
         }
@@ -1361,7 +1385,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      */
     protected boolean isAncestorByValue(Node<E> child, Node<E> possibleAncestor) {
         if(possibleAncestor == null) return true;
-        List<E> possibleAncestorPath = possibleAncestor.path;
+        Path<E> possibleAncestorPath = possibleAncestor.path;
 
         // this is too long a path to be an ancestor's
         if(possibleAncestorPath.size() >= child.path.size()) return false;
@@ -1417,13 +1441,13 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * @return <code>true</code> if the specified node's children shall be
          *      visible, or <code>false</code> if they should be hidden.
          */
-        boolean isExpanded(E element, List<E> path);
+        boolean isExpanded(E element, Path<E> path);
 
         /**
          * Notifies this handler that the specified element's expand/collapse
          * state has changed.
          */
-        void setExpanded(E element, List<E> path, boolean expanded);
+        void setExpanded(E element, Path<E> path, boolean expanded);
     }
 
     /**
@@ -1434,10 +1458,12 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         public DefaultExpansionModel(boolean expanded) {
             this.expanded = expanded;
         }
-        public boolean isExpanded(E element, List<E> path) {
+        @Override
+        public boolean isExpanded(E element, Path<E> path) {
             return expanded;
         }
-        public void setExpanded(E element, List<E> path, boolean expanded) {
+        @Override
+        public void setExpanded(E element, Path<E> path, boolean expanded) {
             // do nothing
         }
     }
@@ -1474,10 +1500,12 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
                 }
             }
         }
-        public boolean isExpanded(E element, List<E> path) {
+        @Override
+        public boolean isExpanded(E element, Path<E> path) {
             return expandedStateByDepth[path.size() - 1];
         }
-        public void setExpanded(E element, List<E> path, boolean expanded) {
+        @Override
+        public void setExpanded(E element, Path<E> path, boolean expanded) {
             // do nothing
         }
     }
@@ -1532,21 +1560,25 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         }
 
         public int compare(Node<E> a, Node<E> b) {
-            int aPathLength = a.path.size();
-            int bPathLength = b.path.size();
+            final Path<E> pathA = a.path;
+            final Path<E> pathB = b.path;
+            
+            final int aPathLength = pathA.size();
+            final int bPathLength = pathB.size();
 
             // get the effective length, everything but the leaf nodes in the path
-            boolean aAllowsChildren = a.virtual || format.allowsChildren(a.path.get(aPathLength - 1));
-            boolean bAllowsChildren = b.virtual || format.allowsChildren(b.path.get(bPathLength - 1));
-            int aEffectiveLength = aPathLength + (aAllowsChildren ? 0 : -1);
-            int bEffectiveLength = bPathLength + (bAllowsChildren ? 0 : -1);
+            final boolean aAllowsChildren = a.virtual || format.allowsChildren(pathA.get(aPathLength - 1));
+            final boolean bAllowsChildren = b.virtual || format.allowsChildren(pathB.get(bPathLength - 1));
+            
+            final int aEffectiveLength = aPathLength + (aAllowsChildren ? 0 : -1);
+            final int bEffectiveLength = bPathLength + (bAllowsChildren ? 0 : -1);
 
             // compare by value first
             for(int d = 0; d < aEffectiveLength && d < bEffectiveLength; d++) {
                 Comparator comparator = format.getComparator(d);
                 if (comparator == null) return 0;
-                int result = comparator.compare(a.path.get(d), b.path.get(d));
-                if(result != 0) return result;
+                int result = comparator.compare(pathA.get(d), pathB.get(d));
+                if (result != 0) return result;
             }
 
             // and path length second
@@ -1558,6 +1590,14 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
      * A private function used to convert list elements into tree paths.
      */
     private static class ElementToTreeNodeFunction<E> implements FunctionList.AdvancedFunction<E, Node<E>> {
+        private static final ThreadLocal<List> CACHED_PATH = new ThreadLocal<List>() {
+            @Override
+            protected List initialValue() {
+                // NOTE KI assume that path is usually rather short
+                return new ArrayList(4);
+            }
+        };
+        
         private final Format<E> format;
         private final ExpansionModel<E> expansionModel;
         public ElementToTreeNodeFunction(Format<E> format, ExpansionModel<E> expansionModel) {
@@ -1566,8 +1606,15 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         }
         public Node<E> evaluate(E sourceValue) {
             // populate the path using the working path as a temporary variable
-            List<E> path = new ArrayList<E>();
-            format.getPath(path, sourceValue);
+            final Path<E> path;
+            final List<E> tmp = CACHED_PATH.get();
+            try {
+                format.getPath(tmp, sourceValue);
+                path = new Path<E>(tmp);
+            } finally {
+                tmp.clear();
+            }
+            
             Node<E> result = new Node<E>(false, path);
             result.expanded = expansionModel.isExpanded(sourceValue, path);
             return result;
@@ -1591,11 +1638,132 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
     }
 
     /**
+     * Inmutable path of node, highly customized "arraylist" implementation
+     * 
+     * <p>TODO KI could optimize size()==1 case to avoid array allocation.
+     * Would help in "flat" treetables a lot (path size 0..1 in 95% rows)
+     */
+    public static final class Path<E> {
+        private final Object[] mPath;
+        private final int mFromIndex;
+        private final int mToIndex;
+        private int mHashCode;
+
+        /**
+         * @param pPath Path, this can be re-used collection, new copy is created
+         */
+        public Path(List<E> pPath) {
+            mPath = pPath.toArray(new Object[pPath.size()]);
+            mFromIndex = 0;
+            mToIndex = mPath.length;
+
+            updateHash(); 
+        }
+
+        /**
+         * <p>NOTE KI This constructor is useless since Path is inmutable
+         */
+        public Path(Path<E> pPath) {
+            // can share array; it's inmutable
+            mPath = pPath.mPath;
+            mFromIndex = pPath.mFromIndex;
+            mToIndex = pPath.mToIndex;
+            
+            mHashCode = pPath.mHashCode;
+        }
+        
+        private Path(Path pPath, int pFromIndex, int pToIndex) {
+            // can share array; it's inmutable
+            mPath = pPath.mPath;
+            mFromIndex = pFromIndex;
+            mToIndex = pToIndex;
+            
+            updateHash(); 
+        }
+
+        private void updateHash() {
+            // cache hash value
+            // @see AbstractList.hashCode()
+            int hash = 1;
+            for (int i = mToIndex - 1; i >= mFromIndex; i--) {
+                Object elem = mPath[i];
+                hash = 31 * hash + (elem == null ? 0 : elem.hashCode());
+            }
+            mHashCode = hash;
+        }
+
+        @Override
+        public int hashCode() {
+            return mHashCode;
+        }
+
+        @Override
+        public boolean equals(Object pObj) {
+            if (this == pObj) {
+                return true;
+            }
+            if (null == pObj) {
+                return false;
+            }
+            
+            boolean result;
+            final Path<E> b = (Path<E>)pObj;
+            final int size = size();
+            
+            result = mHashCode == b.mHashCode
+                && size == b.size();
+            
+            if (result) {
+                for (int i = size - 1; result && i >= 0; i--) {
+                    E elemA = get(i);
+                    E elemB = b.get(i);
+                    result = elemA != null 
+                        ? elemA.equals(elemB) 
+                        : elemB == null;
+                }
+            }
+            
+            return result;
+        }
+        
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder(200);
+            sb.append('[');
+            for (int i = mFromIndex; i < mToIndex; i++) {
+                sb.append(mPath[i]);
+                if (i < mToIndex - 1) {
+                    sb.append(',');
+                }
+            }
+            sb.append(']');
+            return sb.toString();
+        }
+
+        public int size() {
+            return mToIndex - mFromIndex;
+        }
+        
+        public E get(int pIndex) {
+            return (E)mPath[mFromIndex + pIndex];
+        }
+        
+        /**
+         * @param pFromIndex inclusive
+         * @param pToIndex Exclusive
+         * @return sub-path
+         */
+        public Path<E> subPath(int pFromIndex, int pToIndex) {
+            return new Path<E>(this, pFromIndex, pToIndex);
+        }
+    }
+    
+    /**
      * A node in the display tree.
      */
     public static final class Node<E> {
 
-        protected final List<E> path;
+        protected final Path<E> path;
 
         /** true if this node isn't in the source list */
         protected boolean virtual;
@@ -1628,7 +1796,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
          * @param path the tree path from root to value that this node represents. It
          *      is an error to mutate this path once it has been provided to a node.
          */
-        Node(boolean virtual, List<E> path) {
+        Node(boolean virtual, Path<E> path) {
             this.virtual = virtual;
             this.path = path;
         }
@@ -1665,10 +1833,10 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         /**
          * @return the path elements for this element, it is an error to modify.
          */
-        public List<E> path() {
+        public Path<E> path() {
             return path;
         }
-
+        
         /**
          * Create a {@link Node} that resembles the parent of this.
          */
@@ -1677,7 +1845,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
             // this is a root node, it has no parent
             if(pathLength == 1) return null;
             // return a node describing the parent path
-            return new Node<E>(true, new ArrayList<E>(path.subList(0, pathLength - 1)));
+            return new Node<E>(true, path.subPath(0, pathLength - 1));
         }
 
         /** {@inheritDoc} */
@@ -1973,15 +2141,7 @@ public final class TreeList<E> extends TransformedList<TreeList.Node<E>,E> {
         mDebug = pDebug;
     }
 
-    public SelectionTracker getSelectionTracker() {
-        return mSelectionTracker;
-    }
-
-    public void setSelectionTracker(SelectionTracker pSelectionTracker) {
-        mSelectionTracker = pSelectionTracker;
-    }
-
-    private static class FakeElement implements Element {
+    private static final class FakeElement implements Element {
         public Object get() { return null; }
         public void set(Object value) { }
         public byte getColor() { return 0; }

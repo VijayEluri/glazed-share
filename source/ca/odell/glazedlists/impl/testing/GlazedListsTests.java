@@ -3,15 +3,25 @@
 /*                                                     O'Dell Engineering Ltd.*/
 package ca.odell.glazedlists.impl.testing;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.FunctionList;
+import ca.odell.glazedlists.TreeList.Path;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.matchers.Matcher;
 import ca.odell.glazedlists.util.concurrent.Lock;
-
-import java.io.*;
-import java.util.*;
 
 /**
  * A factory class useful for testing!
@@ -54,6 +64,13 @@ public class GlazedListsTests {
             result.add(chars.subSequence(i, i+1).toString());
         }
         return result;
+    }
+
+    /**
+     * Convert the characters of the specified String to a list.
+     */
+    public static Path<String> stringToPath(CharSequence chars) {
+        return new Path(stringToList(chars));
     }
 
     /**
