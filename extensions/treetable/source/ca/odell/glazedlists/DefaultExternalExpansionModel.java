@@ -6,8 +6,6 @@ package ca.odell.glazedlists;
 import java.util.HashMap;
 import java.util.Map;
 
-import ca.odell.glazedlists.TreeList.Path;
-
 /**
  * An {@link TreeList.ExpansionModel} that uses a {@link Map} to remember
  * the expanded/collapsed state of elements.

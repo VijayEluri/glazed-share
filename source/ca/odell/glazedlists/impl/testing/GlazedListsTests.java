@@ -17,7 +17,6 @@ import java.util.List;
 
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.FunctionList;
-import ca.odell.glazedlists.TreeList.Path;
 import ca.odell.glazedlists.event.ListEvent;
 import ca.odell.glazedlists.event.ListEventListener;
 import ca.odell.glazedlists.matchers.Matcher;
@@ -64,13 +63,6 @@ public class GlazedListsTests {
             result.add(chars.subSequence(i, i+1).toString());
         }
         return result;
-    }
-
-    /**
-     * Convert the characters of the specified String to a list.
-     */
-    public static Path<String> stringToPath(CharSequence chars) {
-        return new Path(stringToList(chars));
     }
 
     /**

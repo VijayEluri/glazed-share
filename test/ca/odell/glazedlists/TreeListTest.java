@@ -9,7 +9,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.TestCase;
-import ca.odell.glazedlists.TreeList.Path;
 import ca.odell.glazedlists.impl.testing.GlazedListsTests;
 import ca.odell.glazedlists.impl.testing.ListConsistencyListener;
 
@@ -22,6 +21,14 @@ public class TreeListTest extends TestCase {
 
     public static final TreeList.Format<String> COMPRESSED_CHARACTER_TREE_FORMAT = new CharacterTreeFormat();
     public static final TreeList.Format<String> UNCOMPRESSED_CHARACTER_TREE_FORMAT = new CharacterTreeFormat(null);
+
+    /**
+     * Convert the characters of the specified String to a list.
+     */
+    public static Path<String> stringToPath(CharSequence chars) {
+        List<String> list = GlazedListsTests.stringToList(chars);
+        return new Path<String>(list);
+    }
 
     /**
      * Can we build a tree list?
@@ -1571,7 +1578,7 @@ public class TreeListTest extends TestCase {
         source.add("ABC");
         source.add("ABD");
 
-        expansionProvider.setExpanded("B", GlazedListsTests.stringToPath("AB"), false);
+        expansionProvider.setExpanded("B", stringToPath("AB"), false);
         source.add(1, "AB");
         assertTreeStructure(treeList, new String[] {
                 "A",
@@ -1821,8 +1828,8 @@ public class TreeListTest extends TestCase {
     public void testComparatorOrdering_FixMe() {
         TreeList.NodeComparator<String> nodeComparator = new TreeList.NodeComparator<String>(new CharacterTreeFormat(String.CASE_INSENSITIVE_ORDER));
 
-        TreeList.Node<String> abc = new TreeList.Node<String>(false, GlazedListsTests.stringToPath("ABC"));
-        TreeList.Node<String> abcd = new TreeList.Node<String>(false, GlazedListsTests.stringToPath("ABCd"));
+        TreeList.Node<String> abc = new TreeList.Node<String>(false, stringToPath("ABC"));
+        TreeList.Node<String> abcd = new TreeList.Node<String>(false, stringToPath("ABCd"));
 
         assertTrue(nodeComparator.compare(abc, abcd) < 0);
     }
